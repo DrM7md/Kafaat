@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\LookupController;
 use App\Http\Controllers\Api\V1\PaymentWebhookController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\RevealController;
+use App\Http\Controllers\Api\V1\RevealListController;
 use App\Support\Permissions as P;
 use Illuminate\Support\Facades\Route;
 
@@ -84,6 +85,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/candidates/{profile}/reveal', RevealController::class)
         ->middleware(['can:'.P::CANDIDATE_REVEAL, 'throttle:10,1'])->name('candidates.reveal');
+
+    Route::get('/reveals', RevealListController::class)
+        ->middleware('can:'.P::CANDIDATE_REVEAL)->name('reveals.index');
 
     // ── لوحة المشرف ──
     Route::prefix('admin')->name('admin.')->group(function () {

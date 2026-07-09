@@ -25,7 +25,11 @@ use Illuminate\Support\Carbon;
  * @property RevealStatus $status
  * @property RevealSource $source
  * @property int $amount
+ * @property string $currency
+ * @property Carbon|null $revealed_at
+ * @property Carbon|null $refunded_at
  * @property Carbon|null $expires_at
+ * @property-read EmployeeProfile $employeeProfile
  */
 class CandidateReveal extends Model
 {

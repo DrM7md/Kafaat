@@ -74,7 +74,15 @@ class SettingSeeder extends Seeder
             // ── حجب الحقول ★ ──
             [
                 'key' => K::MASKING_FIELDS,
-                'value' => ['name', 'initials', 'avatar', 'phone', 'email', 'current_employer', 'attachments', 'links'],
+                'value' => [
+                    'name', 'initials', 'avatar', 'phone', 'email',
+                    'current_employer', 'attachments', 'links',
+
+                    // البند الجزائي ومبلغه: شرطٌ في عقد الموظّف الحالي.
+                    // كشفهما قبل الدفع يمنح الشركة ورقة تفاوضٍ مجّاناً،
+                    // ويكشف تفاصيل عقده مع صاحب عمله. Brain/03 §2.
+                    'notice_period_clause', 'penalty_amount',
+                ],
                 'type' => 'array',
                 'group' => 'masking',
                 'description' => 'الحقول الغائبة من استجابة الـ API قبل الكشف. تجسيد مبدأ «لا كود لتغيير قاعدة عمل».',

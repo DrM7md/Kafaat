@@ -28,8 +28,17 @@ beforeEach(function () {
     app(SettingsRepository::class)->flush();
 });
 
-/** الحقول التي يجب ألّا تظهر أبداً قبل كشفٍ صالح. */
-const MASKED = ['name', 'initials', 'phone', 'email', 'current_employer', 'attachments'];
+/**
+ * الحقول التي يجب ألّا تظهر أبداً قبل كشفٍ صالح.
+ *
+ * `notice_period_clause` و`penalty_amount` أُضيفا بعد أن كشف فحصٌ حيٌّ
+ * تسرّبهما: البند الجزائي يمنح الشركة ورقة تفاوضٍ مجّاناً ويكشف تفاصيل
+ * عقد الموظّف مع صاحب عمله.
+ */
+const MASKED = [
+    'name', 'initials', 'phone', 'email', 'current_employer', 'attachments',
+    'notice_period_clause', 'penalty_amount',
+];
 
 function companyUser(): CompanyProfile
 {

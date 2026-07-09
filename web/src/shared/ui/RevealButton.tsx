@@ -1,0 +1,54 @@
+import { CheckIcon, LockIcon } from './MaskedAvatar'
+import { formatQar } from '@/shared/lib/format'
+
+/**
+ * زرّ الكشف — العنصر المحوري في المنتج.
+ *
+ * ★ انضباط اللون: الذهبي `#B4863B` يعني «هنا يقع الفعل الذي يُدرّ المال».
+ *   وما إن يُستهلك الفعل، يهجر الذهبيُّ الزرَّ إلى البترولي. سلوكٌ مقصود
+ *   في التصميم (`btnBg: revealed ? '#E4EDEB' : '#B4863B'`) — احترمه.
+ *
+ * قيمة الرسم تأتي من الإعدادات لا من الكود.
+ */
+export function RevealButton({
+  revealed,
+  fee,
+  pending = false,
+  compact = false,
+  onReveal,
+}: {
+  revealed: boolean
+  fee: number
+  pending?: boolean
+  compact?: boolean
+  onReveal: () => void
+}) {
+  const label = revealed
+    ? compact
+      ? 'عرض'
+      : 'عرض بيانات التواصل'
+    : compact
+      ? `كشف · ${formatQar(fee, false)}`
+      : `كشف الهوية · ${formatQar(fee)}`
+
+  return (
+    <button
+      type="button"
+      onClick={onReveal}
+      disabled={pending}
+      className="inline-flex cursor-pointer items-center gap-2 rounded-[11px] px-4 py-2.5 text-[12.5px] font-semibold transition-[filter] hover:brightness-105 disabled:cursor-wait disabled:opacity-70"
+      style={
+        revealed
+          ? { background: 'var(--k-mint)', color: 'var(--k-primary-dark)' }
+          : {
+              background: 'linear-gradient(135deg, var(--k-gold-light), var(--k-gold))',
+              color: '#fff',
+              boxShadow: 'var(--k-shadow-gold)',
+            }
+      }
+    >
+      <span className="inline-flex">{revealed ? <CheckIcon /> : <LockIcon />}</span>
+      {pending ? 'جارٍ…' : label}
+    </button>
+  )
+}

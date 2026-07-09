@@ -1,0 +1,118 @@
+# كفاءات (Kafaat)
+
+> حيث تجد الشركةُ موظّفَها المناسب.
+
+منصّة توظيف قطرية تعرض **ملفّات مهنية مجهولة الهوية**؛ تتصفّحها الشركات وتطّلع على المؤهّلات، ولا تُكشَف هويّة المرشّح وبيانات التواصل معه إلّا **مقابل رسمٍ يُدفَع للمنصّة**.
+
+---
+
+## المبدأ الحاكم
+
+> **الحجب حالةُ بيانات، لا حالةُ عرض.**
+
+إن لم يوجد سجلّ كشفٍ صالح، فالحقل الحسّاس **غائب تماماً من استجابة الـ API** — لا `null`، ولا منجَّم `أ***د`، ولا مشوّش بـ CSS. اقرأ [`Brain/06-masking-and-reveal.md`](Brain/06-masking-and-reveal.md) قبل لمس أي كود يمسّ الملفّات.
+
+---
+
+## البنية
+
+| المجلد | المحتوى |
+|---|---|
+| [`Brain/`](Brain/) | **عقل المشروع.** المعمارية، المنطق، المراحل، سجلّ القرارات (ADR). |
+| [`progress/`](progress/) | حالة الإنجاز، محدَّثة باستمرار. |
+| [`UI/`](UI/) | نماذج التصميم المرجعية (لا تُنشر). |
+| `api/` | Laravel 13 — REST API خالص. |
+| `web/` | React 19 + TypeScript + Vite — SPA. |
+
+---
+
+## التشغيل
+
+### المتطلّبات
+PHP 8.5 · Composer 2 · Node 22 · MySQL 8
+
+### الخلفية
+
+```bash
+cd api
+composer install
+cp .env.example .env
+php artisan key:generate
+mysql -u root -e "CREATE DATABASE kafaat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+mysql -u root -e "CREATE DATABASE kafaat_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+php artisan migrate --seed
+php artisan serve --port=8010
+```
+
+> المنفذ **8010** لا 8000 — تفادياً للتصادم مع مشاريع أخرى على الجهاز نفسه.
+
+### الواجهة
+
+```bash
+cd web
+npm install
+cp .env.example .env
+npm run dev          # http://localhost:5173
+```
+
+### حسابات العرض (بيئة التطوير)
+
+| الحساب | البريد | كلمة المرور |
+|---|---|---|
+| المشرف العام | `admin@kafaat.qa` | `password` |
+| شركة | `gulf@kafaat.qa` | `password` |
+| شركة أخرى | `doha-bank@kafaat.qa` | `password` |
+| موظّف | `a.alkuwari@mail.qa` | `password` |
+
+> `أحمد الكواري` موظّفٌ حاليّ لدى «شركة الخليج للتقنية». سجّل دخولك بها، ولن تجده في التصفّح إطلاقاً — **عمى صاحب العمل**.
+
+---
+
+## تجربة دورة الكشف كاملة
+
+1. سجّل دخولك كشركة (`gulf@kafaat.qa`) وافتح `/candidates`.
+2. لاحظ أن الأسماء **غائبة**، لا مشوّشة. افتح أدوات المطوّر ← Network ← ستجد أن الـ JSON نفسه لا يحوي `name`.
+3. اضغط «كشف الهوية · ٧٥ ر.ق» ← تُنقَل إلى صفحة محاكاة الدفع.
+4. انسخ الأمر المعروض وشغّله في طرفية `api/`:
+
+```bash
+php artisan kafaat:simulate-payment {provider_ref}
+```
+
+هذا يرسل webhook **موقّعاً بـ HMAC** إلى المسار الحقيقي، فيمرّ بتحقّق التوقيع ومنع إعادة التشغيل والمعاملة كاملةً — لا يكتب في قاعدة البيانات مباشرةً، وإلّا كنّا نختبر طريقاً لا يسلكه الإنتاج.
+
+5. عُد إلى `/candidates` ← ظهر الاسم وبيانات التواصل، **لهذا المرشّح وحده**.
+
+---
+
+## الجودة
+
+```bash
+cd api
+php vendor/bin/pest        # 66 اختباراً
+php vendor/bin/pint --test # تنسيق
+php vendor/bin/phpstan analyse --memory-limit=1G   # Larastan level 7
+
+cd ../web
+npm run build              # tsc + vite
+```
+
+> **ملاحظة:** حزمة `laravel/pao` تعترض مخرجات الأدوات وتُحوّلها JSON عند التشغيل تحت وكيل. لرؤية المخرجات الخام: `PAO_DISABLE=1 php vendor/bin/phpstan …`
+
+### الاختبارات على MySQL لا SQLite
+
+عمداً (ADR-015): `lockForUpdate()` **لا أثر له في SQLite**. لو انزلقت الاختبارات إليها، لمرّ اختبارُ منع الخصم المزدوج كذباً.
+
+---
+
+## للمساهمين
+
+اقرأ [`Brain/README.md`](Brain/README.md) — المبادئ الحاكمة الخمسة غير قابلة للتفاوض:
+
+1. الحجب يقع في الـ API، لا في الواجهة.
+2. كل قاعدة عمل تعيش في الإعدادات، لا في الكود.
+3. لا أدوار مثبّتة في الكود — الفحص بالصلاحية دائماً.
+4. كل فعل حسّاس يُسجَّل في `audit_logs`.
+5. الخصوصية بالتصميم، لا بالإضافة.
+
+ثمّ [`progress/STATUS.md`](progress/STATUS.md) لتعرف أين نحن.

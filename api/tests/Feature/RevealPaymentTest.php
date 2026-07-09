@@ -241,6 +241,26 @@ it('★ عمى صاحب العمل يسبق المال: 404 لا كشف', functi
     expect(Payment::count())->toBe(0);
 });
 
+it('★ الإشعار يُكتب فعلاً في قاعدة البيانات (بلا تزييف)', function () {
+    // Notification::fake() يخفي غياب جدول `notifications` — وقد أخفاه فعلاً
+    // حتى كشفه تشغيلٌ حيّ. هذا الاختبار لا يزيّف شيئاً.
+    $this->actingAs($this->company->user)
+        ->withHeader('Idempotency-Key', 'key-1')
+        ->postJson("/api/v1/candidates/{$this->profile->ref}/reveal");
+
+    $payment = Payment::firstOrFail();
+    [$body, $signature] = signedWebhook(webhook($payment->provider_ref, 75));
+
+    $this->call('POST', '/api/v1/payments/webhook/manual', [], [], [],
+        ['HTTP_X_SIGNATURE' => $signature, 'CONTENT_TYPE' => 'application/json'], $body)
+        ->assertOk();
+
+    $this->assertDatabaseHas('notifications', [
+        'notifiable_id' => $this->profile->user->id,
+        'type' => ProfileRevealedNotification::class,
+    ]);
+});
+
 it('حساب موظّف لا يستطيع الكشف', function () {
     $employee = EmployeeProfile::factory()->create();
 

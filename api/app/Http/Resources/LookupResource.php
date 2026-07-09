@@ -21,6 +21,9 @@ final class LookupResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            // `id` يلزم نماذجَ التحرير (اختيار المجال/المدينة)، و`key` يلزم
+            // الفلترة العامّة. كلاهما غير معرِّف لشخص، فلا حرج في كشفهما.
+            'id' => $this->id,
             'key' => $this->key,
             'label' => $this->label_ar,
 
