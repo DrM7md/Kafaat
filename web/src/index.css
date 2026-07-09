@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+@import './styles/tokens.css';
+
+/* ربط رموز التصميم بنظام Tailwind — Brain/02-design-system.md */
+@theme {
+  --color-primary: #0f5049;
+  --color-primary-dark: #0a3a34;
+  --color-gold: #b4863b;
+  --color-gold-light: #c99b4c;
+  --color-gold-tint: #f5eddd;
+  --color-canvas: #f1ede4;
+  --color-ink: #16211f;
+  --color-surface: #ffffff;
+  --color-surface-alt: #fbf9f4;
+  --color-surface-muted: #f8f6f0;
+  --color-mint: #e4edeb;
+
+  --font-heading: 'Reem Kufi', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-numeric: 'Tajawal', system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    margin: 0;
+    background: var(--k-canvas);
+    color: var(--k-ink);
+    font-family: var(--k-font-body);
+    direction: rtl;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--k-font-heading);
+  }
+
+  a {
+    color: var(--k-primary);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--k-primary-dark);
+  }
+
+  /* حلقة تركيز مرئية دائماً — إمكانية الوصول */
+  :focus-visible {
+    outline: 2px solid var(--k-primary);
+    outline-offset: 2px;
+  }
+}
+
+@utility numeric {
+  font-family: var(--k-font-numeric);
+  font-feature-settings: 'tnum';
+}

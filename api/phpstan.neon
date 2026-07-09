@@ -1,0 +1,18 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/pestphp/pest/extension.neon
+
+parameters:
+    # ADR-015: كود المنتج فقط.
+    # مغلقات Pest تُعيد ربط $this بـ TestCase وقت التشغيل، وPHPStan لا يستطيع
+    # نمذجة ذلك — فتحليل tests/ يُنتج أخطاء كاذبة (method.notFound) لا سبيل
+    # لإسكاتها إلّا بـ @phpstan-ignore، وBrain/README يمنع ذلك.
+    # الاختبارات محروسة بـ Pint وبتشغيلها الفعلي، لا بالتحليل الساكن.
+    paths:
+        - app
+        - database
+        - routes
+
+    # المستوى 7 حدّ أدنى (Brain/08-phases.md · م0).
+    # لا يُخفَّض. إن عجز الكود عن بلوغه، يُصلَح الكود لا المستوى.
+    level: 7

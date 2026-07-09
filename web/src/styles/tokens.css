@@ -1,0 +1,97 @@
+/* ==========================================================================
+   رموز التصميم — كفاءات
+   مستخرجة حرفياً من UI/كفاءات - بطاقة الكفاءة (تنويعات).dc.html
+   المرجع: Brain/02-design-system.md — لا تُغيَّر قيمة هنا دون تحديثه.
+   ========================================================================== */
+
+:root {
+  /* ── اللوحة اللونية ── */
+  --k-primary: #0f5049;        /* بترولي — أساسي */
+  --k-primary-dark: #0a3a34;   /* بترولي غامق */
+  --k-gold: #b4863b;           /* ذهبي — فعل الكشف حصراً (انظر التحذير أدناه) */
+  --k-gold-light: #c99b4c;     /* طرف تدرّج زرّ الكشف */
+  --k-gold-tint: #f5eddd;      /* خلفية بطاقة التواصل المكشوفة */
+  --k-canvas: #f1ede4;         /* قماشة — خلفية الصفحة */
+  --k-ink: #16211f;            /* حبر — النصّ الأساسي */
+  --k-surface: #ffffff;        /* سطح — البطاقات */
+  --k-surface-alt: #fbf9f4;    /* سطح بديل — حاوية الشبكة */
+  --k-surface-muted: #f8f6f0;  /* سطح خافت — شريط الإحصاءات */
+  --k-mint: #e4edeb;           /* نعناعي — خلفية شارات البترولي */
+
+  /* ⚠️ الذهبي ليس لوناً ثانوياً عاماً.
+     يظهر حصراً في: زرّ الكشف · بطاقة التواصل بعد الكشف · شارة «كفاءة مميّزة».
+     استخدامه في زرّ حفظ أو تنبيه عام يُفسد اللغة البصرية. ممنوع. */
+
+  /* ── الشفافيات (مشتقّة من الحبر) ── */
+  --k-border: rgb(22 33 31 / 0.09);
+  --k-border-strong: rgb(22 33 31 / 0.12);
+  --k-divider: rgb(22 33 31 / 0.08);
+  --k-text-secondary: rgb(22 33 31 / 0.6);
+  --k-text-muted: rgb(22 33 31 / 0.45);
+
+  /* ── الخطوط ── */
+  --k-font-heading: 'Reem Kufi', system-ui, sans-serif;
+  --k-font-body: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --k-font-numeric: 'Tajawal', system-ui, sans-serif; /* الأرقام والإحصاءات حصراً */
+
+  /* ── الاستدارة ── */
+  --k-radius-chip: 0.375rem;   /* 6px  — شارة مهارة */
+  --k-radius-sm: 0.625rem;     /* 10px — زرّ مضغوط */
+  --k-radius-md: 0.75rem;      /* 12px — صورة رمزية، حقل بحث */
+  --k-radius-lg: 1rem;         /* 16px — بطاقة */
+  --k-radius-xl: 1.25rem;      /* 20px — حاوية كبرى */
+  --k-radius-2xl: 1.5rem;      /* 24px — بطاقة بارزة */
+  --k-radius-pill: 1.25rem;    /* شارة */
+
+  /* ── الظلال ── */
+  --k-shadow-container: 0 4px 24px rgb(22 33 31 / 0.06);
+  --k-shadow-hero: 0 10px 40px rgb(22 33 31 / 0.1);
+  --k-shadow-hover: 0 12px 30px rgb(22 33 31 / 0.1);
+  --k-shadow-gold: 0 8px 22px rgb(180 134 59 / 0.4);
+  --k-shadow-primary: 0 6px 18px rgb(15 80 73 / 0.28);
+}
+
+/* ── ألوان الحالة الوظيفية ──
+   ⚠️ هذه قيم احتياطية للعرض دون اتصال فقط.
+   المصدر الحقيقي هو lookups.meta القادم من الـ API — وإلّا استحال
+   على المشرف إضافة حالة رابعة بلونها دون كود (Brain/05 §4). */
+:root {
+  --k-status-leaving-bg: #e7f3ea;
+  --k-status-leaving-fg: #1e7a44;
+  --k-status-leaving-dot: #2fa35c;
+
+  --k-status-open-bg: #fbf0d9;
+  --k-status-open-fg: #96682a;
+  --k-status-open-dot: #c9922f;
+
+  --k-status-stable-bg: #ecefee;
+  --k-status-stable-fg: #566460;
+  --k-status-stable-dot: #8a9793;
+}
+
+/* ── الحركة ── */
+@keyframes kf-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes kf-rise {
+  0% { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes kf-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

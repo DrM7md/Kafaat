@@ -1,0 +1,33 @@
+# ── الخلفية ──
+/api/vendor
+/api/node_modules
+/api/.env
+/api/.env.backup
+/api/.phpunit.result.cache
+/api/storage/*.key
+/api/storage/pail
+/api/storage/framework/cache/data/*
+/api/storage/framework/sessions/*
+/api/storage/framework/views/*
+/api/storage/logs/*
+/api/storage/app/private/*
+/api/public/storage
+/api/database/*.sqlite
+/api/bootstrap/cache/*.php
+/api/auth.json
+
+# ── الواجهة ──
+/web/node_modules
+/web/dist
+/web/.env
+/web/.env.local
+/web/*.tsbuildinfo
+
+# ── عامّ ──
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+npm-debug.log*
