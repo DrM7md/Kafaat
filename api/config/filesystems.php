@@ -38,6 +38,21 @@ return [
             'report' => false,
         ],
 
+        /*
+         * قرص المرفقات الحسّاسة: السير الذاتية والشهادات.
+         *
+         * `serve => false` متعمَّد: لا مسار خدمةٍ تلقائي. الوصول حصراً عبر
+         * GET /api/v1/attachments/{uuid} المحروس بـ AttachmentPolicy.
+         * رابطٌ مباشر واحد يتجاوز الحجب كلّه ويُلغي نموذج الربح.
+         */
+        'private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/secure'),
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
