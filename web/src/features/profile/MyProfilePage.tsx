@@ -130,7 +130,7 @@ export function MyProfilePage() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-[13px] font-semibold text-ink">اكتمال الملفّ</p>
-            <p className="numeric text-2xl font-bold text-primary">{profile.completeness}٪</p>
+            <p className="numeric text-2xl font-bold text-primary">{profile.completeness}%</p>
           </div>
 
           <button

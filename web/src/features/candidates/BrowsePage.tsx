@@ -1,40 +1,39 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { api, apiErrorMessage } from '@/shared/api/client'
-import type { Candidate, Lookup, Paginated } from '@/shared/api/types'
+import { apiErrorMessage } from '@/shared/api/client'
+import type { Lookup } from '@/shared/api/types'
 import { CandidateCard } from '@/shared/ui/CandidateCard'
 import { useReveal } from './useReveal'
+import { candidateListQuery, lookupsQuery, EMPTY_FILTERS, type Filters } from './queries'
+import { usePrefetchCandidate } from './usePrefetchCandidate'
 import { useBillingUnderDevelopment } from '@/shared/hooks/usePublicSettings'
+import { useDebounced } from '@/shared/hooks/useDebounced'
 import { formatNumber } from '@/shared/lib/format'
-
-type Filters = {
-  q: string
-  field: string
-  city: string
-  status: string
-  min_experience: string
-}
-
-const EMPTY: Filters = { q: '', field: '', city: '', status: '', min_experience: '' }
 
 /** شبكة التصفّح — معالجة `1a` (ADR-008). */
 export function BrowsePage() {
-  const [filters, setFilters] = useState<Filters>(EMPTY)
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const reveal = useReveal()
   const billingUnderDevelopment = useBillingUnderDevelopment()
+  const prefetchCandidate = usePrefetchCandidate()
 
-  const lookups = useQuery({
-    queryKey: ['lookups'],
-    queryFn: async () => (await api.get<{ lookups: Record<string, Lookup[]> }>('/lookups')).data.lookups,
-    staleTime: Infinity,
-  })
+  const lookups = useQuery(lookupsQuery())
+
+  // الحقول النصّية تُؤخَّر، والقوائم المنسدلة تُطبَّق فوراً.
+  //
+  // بلا هذا كان `queryKey` يتغيّر مع كل حرف يُكتب، فيُطلَق طلبٌ لكل ضغطة:
+  // كتابة «مهندس» = ستّة طلبات. الخطّاف كان موجوداً وتستعمله لوحة المشرف،
+  // وصفحة التصفّح — وهي الأكثر استعمالاً — وحدها لم تكن تستعمله.
+  const debouncedQ = useDebounced(filters.q)
+  const debouncedMinExperience = useDebounced(filters.min_experience)
+
+  const queryFilters = useMemo(
+    (): Filters => ({ ...filters, q: debouncedQ, min_experience: debouncedMinExperience }),
+    [filters, debouncedQ, debouncedMinExperience],
+  )
 
   const candidates = useQuery({
-    queryKey: ['candidates', filters],
-    queryFn: async () => {
-      const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
-      return (await api.get<Paginated<Candidate>>('/candidates', { params })).data
-    },
+    ...candidateListQuery(queryFilters),
     placeholderData: keepPreviousData,
   })
 
@@ -44,7 +43,7 @@ export function BrowsePage() {
         filters={filters}
         lookups={lookups.data}
         onChange={setFilters}
-        onReset={() => setFilters(EMPTY)}
+        onReset={() => setFilters(EMPTY_FILTERS)}
       />
 
       {billingUnderDevelopment && (
@@ -80,6 +79,7 @@ export function BrowsePage() {
               <CandidateCard
                 key={candidate.ref}
                 candidate={candidate}
+                onPrefetch={prefetchCandidate}
                 pending={reveal.isPending && reveal.variables === candidate.ref}
                 onReveal={(ref) => reveal.mutate(ref)}
               />
@@ -142,7 +142,7 @@ function Toolbar({
         max={60}
         value={filters.min_experience}
         onChange={(e) => onChange({ ...filters, min_experience: e.target.value })}
-        placeholder="الخبرة ٥+"
+        placeholder="الخبرة 5+"
         className="w-28 rounded-full border border-[var(--k-border-strong)] bg-surface px-3.5 py-2 text-xs outline-none"
       />
 

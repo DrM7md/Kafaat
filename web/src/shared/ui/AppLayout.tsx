@@ -1,10 +1,15 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '@/shared/auth/AuthProvider'
 import { Can } from '@/shared/auth/Can'
+import { useWarmCache } from '@/shared/hooks/useWarmCache'
+import { prefetchRouteChunk } from '@/app/lazyRoutes'
 
 export function AppLayout() {
   const { me, logout } = useAuth()
   const navigate = useNavigate()
+
+  // القوائم المرجعية والصفحة الأولى تُجلب الآن، لا عند أوّل نقرة.
+  useWarmCache()
 
   async function handleLogout() {
     await logout()
@@ -74,9 +79,14 @@ export function AppLayout() {
 }
 
 function NavItem({ to, children }: { to: string; children: string }) {
+  // تمرير المؤشّر نيّةُ نقرٍ: نُنزّل جزء الصفحة قبل أن تصل النقرة.
+  const prefetch = () => prefetchRouteChunk[to]?.()
+
   return (
     <NavLink
       to={to}
+      onMouseEnter={prefetch}
+      onFocus={prefetch}
       className={({ isActive }) =>
         `rounded-lg px-3 py-1.5 font-medium transition-colors ${
           isActive ? 'bg-mint text-primary' : 'text-[var(--k-text-secondary)] hover:bg-surface-muted'

@@ -156,7 +156,7 @@ public function toArray($request): array
 الشركة تتصفّح  ──►  بطاقات محجوبة (بلا اسم ولا تواصل — غائبة من الـ JSON)
        │
        ▼
-تضغط «كشف الهوية · ٧٥ ر.ق»
+تضغط «كشف الهوية · 75 ر.ق»
        │
        ▼
 POST /api/v1/candidates/{ref}/reveal      [Idempotency-Key مطلوب]

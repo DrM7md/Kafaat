@@ -96,7 +96,7 @@ export function AuditLogPage() {
                     </code>
                   </td>
                   <td className="p-3 numeric text-[11px] text-[var(--k-text-muted)]">
-                    {new Date(log.created_at).toLocaleString('ar-QA')}
+                    {new Date(log.created_at).toLocaleString('ar-QA-u-nu-latn')}
                   </td>
                 </tr>
               ))}

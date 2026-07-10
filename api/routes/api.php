@@ -37,7 +37,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class)->name('health');
 Route::get('/settings/public', [SettingController::class, 'publicSettings'])->name('settings.public');
-Route::get('/lookups', LookupController::class)->name('lookups.index');
+
+// بياناتٌ مرجعية شبه ثابتة (المجالات، المدن، حالات التوظيف). ETag يجعل
+// إعادة التحميل تردّ 304 بلا جسم، و`max_age` يجعل المتصفّح لا يسأل أصلاً.
+//
+// ⚠️ لا تُضِف `settings/public` هنا: تعديل المشرف يجب أن يظهر فوراً.
+Route::get('/lookups', LookupController::class)
+    ->middleware('cache.headers:public;max_age=300;etag')
+    ->name('lookups.index');
 
 // ── المصادقة ──
 Route::post('/auth/register/employee', [RegisterController::class, 'employee'])

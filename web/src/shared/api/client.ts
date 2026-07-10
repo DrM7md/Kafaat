@@ -86,6 +86,14 @@ export type ApiError = {
   errors?: Record<string, string[]>
 }
 
+/**
+ * 404 جوابٌ قاطع: الملفّ غير متاح (أو أنت صاحب عمله — لا نميّز، ADR-004).
+ * ما عداه (انقطاع شبكة، 500 عابر) لا يُلغي محتوىً معروضاً أصلاً.
+ */
+export function isNotFound(err: unknown): boolean {
+  return axios.isAxiosError(err) && err.response?.status === 404
+}
+
 export function apiErrorMessage(err: unknown): string {
   if (axios.isAxiosError<ApiError>(err)) {
     return err.response?.data?.message ?? 'تعذّر الاتصال بالخادم.'

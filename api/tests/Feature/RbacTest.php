@@ -23,7 +23,7 @@ beforeEach(function () {
     app(SettingsRepository::class)->flush();
 });
 
-it('١ — مستخدم بلا صلاحية الكشف يُمنع', function () {
+it('1 — مستخدم بلا صلاحية الكشف يُمنع', function () {
     $profile = EmployeeProfile::factory()->create();
     $user = User::factory()->create();
 
@@ -33,14 +33,14 @@ it('١ — مستخدم بلا صلاحية الكشف يُمنع', function () 
         ->assertForbidden();
 });
 
-it('٢ — الصلاحية عبر دور تكفي', function () {
+it('2 — الصلاحية عبر دور تكفي', function () {
     $user = User::factory()->create();
     $user->assignRole(Roles::COMPANY);
 
     expect($user->can(Permissions::CANDIDATE_BROWSE))->toBeTrue();
 });
 
-it('٣ — صلاحية مباشرة بلا دور تكفي', function () {
+it('3 — صلاحية مباشرة بلا دور تكفي', function () {
     $user = User::factory()->create();
     $user->givePermissionTo(Permissions::CANDIDATE_BROWSE);
 
@@ -48,7 +48,7 @@ it('٣ — صلاحية مباشرة بلا دور تكفي', function () {
         ->and($user->roles)->toBeEmpty();
 });
 
-it('٤ — منعٌ فرديّ يتجاوز الدور', function () {
+it('4 — منعٌ فرديّ يتجاوز الدور', function () {
     $user = User::factory()->create();
     $user->assignRole(Roles::COMPANY);
 
@@ -65,7 +65,7 @@ it('٤ — منعٌ فرديّ يتجاوز الدور', function () {
         ->and($user->fresh()->can(Permissions::CANDIDATE_BROWSE))->toBeTrue();
 });
 
-it('٥ — المشرف العام ينجح في كل شيء عبر Gate::before', function () {
+it('5 — المشرف العام ينجح في كل شيء عبر Gate::before', function () {
     $admin = User::factory()->create();
     $admin->assignRole(Roles::SUPER_ADMIN);
 
@@ -102,7 +102,7 @@ it('★ /me لا تُسرّب صلاحياتٍ لا يملكها المستخد�
         ->not->toContain('rbac.manage');
 });
 
-it('٦ — نزع صلاحية من دور يُفقدها المستخدمين فوراً', function () {
+it('6 — نزع صلاحية من دور يُفقدها المستخدمين فوراً', function () {
     $user = User::factory()->create();
     $user->assignRole(Roles::COMPANY);
 
@@ -114,7 +114,7 @@ it('٦ — نزع صلاحية من دور يُفقدها المستخدمين �
     expect($user->fresh()->can(Permissions::CANDIDATE_REVEAL))->toBeFalse();
 });
 
-it('٧ — إعادة تشغيل PermissionSeeder لا تُكرّر ولا تفقد إسنادات', function () {
+it('7 — إعادة تشغيل PermissionSeeder لا تُكرّر ولا تفقد إسنادات', function () {
     $user = User::factory()->create();
     $user->assignRole(Roles::COMPANY);
 
@@ -128,7 +128,7 @@ it('٧ — إعادة تشغيل PermissionSeeder لا تُكرّر ولا تف�
         ->and($user->fresh()->can(Permissions::CANDIDATE_REVEAL))->toBeTrue();
 });
 
-it('٨ — لا يستطيع المستخدم نزع rbac.manage عن نفسه', function () {
+it('8 — لا يستطيع المستخدم نزع rbac.manage عن نفسه', function () {
     $role = Role::findOrCreate('rbac-admin', 'web');
     $role->syncPermissions([Permissions::RBAC_MANAGE]);
 
@@ -141,7 +141,7 @@ it('٨ — لا يستطيع المستخدم نزع rbac.manage عن نفسه',
         ->assertStatus(422);
 });
 
-it('٩ — مصفوفة الصلاحيات تُعيد الكتالوج والحرجة', function () {
+it('9 — مصفوفة الصلاحيات تُعيد الكتالوج والحرجة', function () {
     $admin = User::factory()->create();
     $admin->assignRole(Roles::SUPER_ADMIN);
 

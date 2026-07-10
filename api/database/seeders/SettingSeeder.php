@@ -66,7 +66,7 @@ class SettingSeeder extends Seeder
                 'type' => 'int',
                 'group' => 'billing',
                 'is_public' => true,
-                'description' => 'رسم الكشف الواحد. القيمة الافتراضية من نموذج التصميم (٧٥ ر.ق).',
+                'description' => 'رسم الكشف الواحد. القيمة الافتراضية من نموذج التصميم (75 ر.ق).',
             ],
             [
                 'key' => K::BILLING_GATEWAY,

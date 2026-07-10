@@ -45,7 +45,7 @@ function companyUser(): CompanyProfile
     return CompanyProfile::factory()->create();
 }
 
-it('١ — لا يُرسل الحقول المحجوبة في قائمة التصفّح', function () {
+it('1 — لا يُرسل الحقول المحجوبة في قائمة التصفّح', function () {
     $company = companyUser();
     EmployeeProfile::factory()->create();
 
@@ -64,7 +64,7 @@ it('١ — لا يُرسل الحقول المحجوبة في قائمة الت�
         ->and($candidate['is_revealed'])->toBeFalse();
 });
 
-it('٢ — لا يُرسل الحقول المحجوبة في الملفّ المفصّل', function () {
+it('2 — لا يُرسل الحقول المحجوبة في الملفّ المفصّل', function () {
     $company = companyUser();
     $profile = EmployeeProfile::factory()->create();
 
@@ -78,7 +78,7 @@ it('٢ — لا يُرسل الحقول المحجوبة في الملفّ ال�
     }
 });
 
-it('٣ — كشفٌ مكتمل يُظهر الاسم وبيانات التواصل بقيمها الصحيحة', function () {
+it('3 — كشفٌ مكتمل يُظهر الاسم وبيانات التواصل بقيمها الصحيحة', function () {
     $company = companyUser();
     $profile = EmployeeProfile::factory()->create();
 
@@ -98,7 +98,7 @@ it('٣ — كشفٌ مكتمل يُظهر الاسم وبيانات التواص
         ->and($data['is_revealed'])->toBeTrue();
 });
 
-it('٤ — كشفٌ pending لا يفكّ الحجب', function () {
+it('4 — كشفٌ pending لا يفكّ الحجب', function () {
     $company = companyUser();
     $profile = EmployeeProfile::factory()->create();
 
@@ -113,10 +113,14 @@ it('٤ — كشفٌ pending لا يفكّ الحجب', function () {
         ->assertOk()
         ->json('data');
 
-    expect($data)->not->toHaveKey('name')->not->toHaveKey('phone');
+    // المجموعة كاملة، لا `name` و`phone` فحسب: تسريبٌ موجَّه لـ `email` أو
+    // `current_employer` في حالة `pending` كان يمرّ أخضر.
+    foreach (MASKED as $field) {
+        expect($data)->not->toHaveKey($field);
+    }
 });
 
-it('٥ — كشفٌ refunded يُعيد الحجب', function () {
+it('5 — كشفٌ refunded يُعيد الحجب', function () {
     $company = companyUser();
     $profile = EmployeeProfile::factory()->create();
 
@@ -133,10 +137,12 @@ it('٥ — كشفٌ refunded يُعيد الحجب', function () {
         ->assertOk()
         ->json('data');
 
-    expect($data)->not->toHaveKey('name')->not->toHaveKey('phone');
+    foreach (MASKED as $field) {
+        expect($data)->not->toHaveKey($field);
+    }
 });
 
-it('٦ — ملفّ موظّف الشركة الطالبة يُعاد بـ 404 لا 403', function () {
+it('6 — ملفّ موظّف الشركة الطالبة يُعاد بـ 404 لا 403', function () {
     $company = companyUser();
     $profile = EmployeeProfile::factory()->employedBy($company->id)->create();
 
@@ -146,7 +152,7 @@ it('٦ — ملفّ موظّف الشركة الطالبة يُعاد بـ 404 �
         ->assertNotFound();
 });
 
-it('٦ب — موظّف الشركة لا يظهر في قائمة تصفّحها أصلاً', function () {
+it('6ب — موظّف الشركة لا يظهر في قائمة تصفّحها أصلاً', function () {
     $company = companyUser();
     EmployeeProfile::factory()->employedBy($company->id)->create();
     EmployeeProfile::factory()->create();
@@ -157,7 +163,7 @@ it('٦ب — موظّف الشركة لا يظهر في قائمة تصفّحه�
     expect($data)->toHaveCount(1);
 });
 
-it('٦ج — حتى الكشف المدفوع لا يخترق عمى صاحب العمل', function () {
+it('6ج — حتى الكشف المدفوع لا يخترق عمى صاحب العمل', function () {
     $company = companyUser();
     $profile = EmployeeProfile::factory()->employedBy($company->id)->create();
 
@@ -172,7 +178,7 @@ it('٦ج — حتى الكشف المدفوع لا يخترق عمى صاحب ا
         ->assertNotFound();
 });
 
-it('٧ — البحث بالاسم لا يُرجع صاحبه', function () {
+it('7 — البحث بالاسم لا يُرجع صاحبه', function () {
     $company = companyUser();
     $profile = EmployeeProfile::factory()->create();
     $profile->user->update(['name' => 'أحمد الكواري']);
@@ -187,7 +193,7 @@ it('٧ — البحث بالاسم لا يُرجع صاحبه', function () {
     expect($data)->toBeEmpty();
 });
 
-it('٨ — تعداد المعرّفات عشوائياً لا يصيب', function () {
+it('8 — تعداد المعرّفات عشوائياً لا يصيب', function () {
     $company = companyUser();
     EmployeeProfile::factory()->count(3)->create();
 
@@ -197,11 +203,11 @@ it('٨ — تعداد المعرّفات عشوائياً لا يصيب', functi
             ->assertNotFound();
     }
 
-    // والمعرّف الحقيقي عشوائي بطول ٨ من أبجدية بلا 0/O/1/I.
+    // والمعرّف الحقيقي عشوائي بطول 8 من أبجدية بلا 0/O/1/I.
     expect(EmployeeProfile::first()->ref)->toMatch('/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$/');
 });
 
-it('١٠ — تعديل masking.fields ينعكس فوراً دون نشر كود', function () {
+it('10 — تعديل masking.fields ينعكس فوراً دون نشر كود', function () {
     $company = companyUser();
     EmployeeProfile::factory()->create();
 
@@ -216,7 +222,7 @@ it('١٠ — تعديل masking.fields ينعكس فوراً دون نشر كو�
         ->and($candidate)->toHaveKey('current_employer');   // لم يعد محجوباً
 });
 
-it('١٠ب — لا يُرفع الحجب عن الاسم دون تأكيد صريح', function () {
+it('10ب — لا يُرفع الحجب عن الاسم دون تأكيد صريح', function () {
     $settings = app(SettingsRepository::class);
 
     expect(fn () => $settings->set('masking.fields', ['phone', 'email']))
@@ -228,7 +234,7 @@ it('١٠ب — لا يُرفع الحجب عن الاسم دون تأكيد صر
     expect(settings('masking.fields'))->toBe(['phone', 'email']);
 });
 
-it('١١ — تنزيل مرفق دون كشفٍ صالح مرفوض', function () {
+it('11 — تنزيل مرفق دون كشفٍ صالح مرفوض', function () {
     $company = companyUser();
     $profile = EmployeeProfile::factory()->create();
 
@@ -246,7 +252,7 @@ it('١١ — تنزيل مرفق دون كشفٍ صالح مرفوض', function 
         ->assertForbidden();
 });
 
-it('١٢ — صلاحية الإشراف تكشف الحقول وتكتب أثر تدقيق', function () {
+it('12 — صلاحية الإشراف تكشف الحقول وتكتب أثر تدقيق', function () {
     $moderator = User::factory()->create();
     $moderator->assignRole(Roles::CONTENT_MODERATOR);
 

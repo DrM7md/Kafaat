@@ -8,14 +8,9 @@ import { BrowsePage } from '@/features/candidates/BrowsePage'
 import { CandidateDetailPage } from '@/features/candidates/CandidateDetailPage'
 import { MyRevealsPage } from '@/features/reveals/MyRevealsPage'
 import { MyProfilePage } from '@/features/profile/MyProfilePage'
-import { CompaniesPage } from '@/features/admin/CompaniesPage'
-import { CompanyDetailPage } from '@/features/admin/CompanyDetailPage'
-import { CandidateApprovalsPage } from '@/features/admin/CandidateApprovalsPage'
-import { RoleMatrixPage } from '@/features/admin/RoleMatrixPage'
-import { SettingsPage } from '@/features/admin/SettingsPage'
-import { AuditLogPage } from '@/features/admin/AuditLogPage'
 import { SimulatePaymentPage } from '@/features/payments/SimulatePaymentPage'
 import { HealthPage } from '@/features/health/HealthPage'
+import { lazyPages } from './lazyRoutes'
 
 /**
  * ⚠️ `ProtectedRoute` يمنع الوصول إلى شاشة. **لا يحمي بياناً.**
@@ -70,32 +65,33 @@ export const router = createBrowserRouter([
             children: [{ path: '/profile', element: <MyProfilePage /> }],
           },
 
+          // ── لوحة المشرف: أجزاءٌ مؤجّلة، تُسخَّن عند تمرير المؤشّر على رابطها ──
           {
             element: <ProtectedRoute permission="company.view" />,
             children: [
-              { path: '/admin/companies', element: <CompaniesPage /> },
-              { path: '/admin/companies/:id', element: <CompanyDetailPage /> },
+              { path: '/admin/companies', element: lazyPages.companies },
+              { path: '/admin/companies/:id', element: lazyPages.companyDetail },
             ],
           },
 
           {
             element: <ProtectedRoute permission="profile.approve" />,
-            children: [{ path: '/admin/candidates', element: <CandidateApprovalsPage /> }],
+            children: [{ path: '/admin/candidates', element: lazyPages.approvals }],
           },
 
           {
             element: <ProtectedRoute permission="rbac.manage" />,
-            children: [{ path: '/admin/roles', element: <RoleMatrixPage /> }],
+            children: [{ path: '/admin/roles', element: lazyPages.roles }],
           },
 
           {
             element: <ProtectedRoute permission="settings.view" />,
-            children: [{ path: '/admin/settings', element: <SettingsPage /> }],
+            children: [{ path: '/admin/settings', element: lazyPages.settings }],
           },
 
           {
             element: <ProtectedRoute permission="audit.view" />,
-            children: [{ path: '/admin/audit', element: <AuditLogPage /> }],
+            children: [{ path: '/admin/audit', element: lazyPages.audit }],
           },
         ],
       },

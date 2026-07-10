@@ -115,7 +115,7 @@ export function CompletenessBar({ value }: { value: number }) {
           style={{ width: `${value}%`, background: value >= 60 ? 'var(--k-primary)' : 'var(--k-gold)' }}
         />
       </div>
-      <span className="numeric text-[11px] text-[var(--k-text-muted)]">{value}٪</span>
+      <span className="numeric text-[11px] text-[var(--k-text-muted)]">{value}%</span>
     </div>
   )
 }

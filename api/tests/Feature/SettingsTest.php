@@ -22,14 +22,14 @@ beforeEach(function () {
     app(SettingsRepository::class)->flush();
 });
 
-it('١ — يُصبّب الأنواع: reveal.fee عددٌ صحيح لا نصّ', function () {
+it('1 — يُصبّب الأنواع: reveal.fee عددٌ صحيح لا نصّ', function () {
     expect(settings('reveal.fee'))->toBeInt()->toBe(75)
         ->and(settings('privacy.employer_blind'))->toBeBool()->toBeTrue()
         ->and(settings('masking.fields'))->toBeArray()
         ->and(settings('platform.name'))->toBeString();
 });
 
-it('٣ — كل كتابة تكتب أثر تدقيق بالقيمة قبل وبعد', function () {
+it('3 — كل كتابة تكتب أثر تدقيق بالقيمة قبل وبعد', function () {
     app(SettingsRepository::class)->set('reveal.fee', 120);
 
     $log = AuditLog::where('action', 'settings.updated')->firstOrFail();
@@ -39,7 +39,7 @@ it('٣ — كل كتابة تكتب أثر تدقيق بالقيمة قبل وب
         ->and($log->meta['after'])->toBe(120);
 });
 
-it('٤ — إعداد is_public=false لا يظهر في المسار العامّ', function () {
+it('4 — إعداد is_public=false لا يظهر في المسار العامّ', function () {
     $public = $this->getJson('/api/v1/settings/public')->assertOk()->json('settings');
 
     expect($public)->toHaveKey('reveal.fee')
@@ -47,17 +47,17 @@ it('٤ — إعداد is_public=false لا يظهر في المسار العام
         ->and($public)->not->toHaveKey('billing.gateway');
 });
 
-it('٥ — قيمة خارج options تُرفض', function () {
+it('5 — قيمة خارج options تُرفض', function () {
     expect(fn () => app(SettingsRepository::class)->set('billing.model', 'bitcoin'))
         ->toThrow(ValidationException::class);
 });
 
-it('٦ — إزالة الاسم من masking.fields تُرفض دون تأكيد', function () {
+it('6 — إزالة الاسم من masking.fields تُرفض دون تأكيد', function () {
     expect(fn () => app(SettingsRepository::class)->set('masking.fields', ['phone']))
         ->toThrow(ValidationException::class);
 });
 
-it('٧ — الكاش يُبطَل عند الكتابة: استعلامٌ واحد بعد التعديل', function () {
+it('7 — الكاش يُبطَل عند الكتابة: استعلامٌ واحد بعد التعديل', function () {
     app(SettingsRepository::class)->all();   // تسخين الكاش
 
     DB::enableQueryLog();
@@ -87,7 +87,7 @@ it('تعديل الإعداد من الـ API ينعكس على الطلب ال�
     $admin = User::factory()->create();
     $admin->assignRole(Roles::SUPER_ADMIN);
 
-    // معيار قبول م7: رفع الرسم من ٧٥ إلى ١٠٠ من اللوحة.
+    // معيار قبول م7: رفع الرسم من 75 إلى 100 من اللوحة.
     $this->actingAs($admin)
         ->putJson('/api/v1/admin/settings', ['key' => 'reveal.fee', 'value' => 100])
         ->assertOk()

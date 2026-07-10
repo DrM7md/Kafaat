@@ -1,11 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
-import { api, apiErrorMessage } from '@/shared/api/client'
-import type { Candidate } from '@/shared/api/types'
+import { apiErrorMessage, isNotFound } from '@/shared/api/client'
 import { MaskedAvatar } from '@/shared/ui/MaskedAvatar'
 import { StatusBadge, SkillChip } from '@/shared/ui/StatusBadge'
 import { RevealButton } from '@/shared/ui/RevealButton'
+import { CandidateDetailSkeleton } from '@/shared/ui/Skeleton'
 import { useReveal } from './useReveal'
+import { candidateDetailQuery, findCandidateInLists } from './queries'
 import { useBillingUnderDevelopment } from '@/shared/hooks/usePublicSettings'
 import { formatRef, formatSalary, formatYears } from '@/shared/lib/format'
 
@@ -13,19 +15,29 @@ export function CandidateDetailPage() {
   const { ref = '' } = useParams()
   const reveal = useReveal()
   const billingUnderDevelopment = useBillingUnderDevelopment()
+  const client = useQueryClient()
 
-  const { data, isPending, isError } = useQuery({
-    queryKey: ['candidates', 'detail', ref],
-    queryFn: async () => (await api.get<{ data: Candidate }>(`/candidates/${ref}`)).data.data,
+  // ★ بذرةٌ من بطاقة القائمة: تُرسم الصفحة فوراً بلا شبكة.
+  //   `initialDataUpdatedAt: 0` يجعلها بائتةً منذ لحظتها، فيُعاد الجلب في
+  //   الخلفية ليُكمل النبذة والخبرات دون أن يرى المستخدم شاشة انتظار.
+  const seed = useMemo(() => findCandidateInLists(client, ref), [client, ref])
+
+  const { data, isPending, error } = useQuery({
+    ...candidateDetailQuery(ref),
+    initialData: seed,
+    initialDataUpdatedAt: 0,
   })
 
   if (isPending) {
-    return <p className="py-16 text-center text-sm text-[var(--k-text-muted)]">جارٍ التحميل…</p>
+    return <CandidateDetailSkeleton />
   }
 
   // 404 هنا قد يعني «غير موجود» أو «أنت صاحب عمله الحالي».
   // لا نميّز بينهما: التمييز نفسه تسريب (ADR-004).
-  if (isError || data === undefined) {
+  //
+  // نفحص 404 لا `isError` المجرّدة: مع البذرة يوجد محتوى معروض، وانقطاعُ
+  // شبكةٍ عابر في إعادة الجلب الخلفيّ لا يجوز أن يمحوه.
+  if (isNotFound(error) || data === undefined) {
     return (
       <div className="grid place-items-center rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-16 text-center">
         <p className="font-heading text-lg text-ink">هذا الملفّ غير متاح</p>

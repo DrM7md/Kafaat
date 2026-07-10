@@ -16,15 +16,24 @@ export function CandidateCard({
   candidate,
   pending = false,
   onReveal,
+  onPrefetch,
 }: {
   candidate: Candidate
   pending?: boolean
   onReveal: (ref: string) => void
+  /** يُستدعى عند نيّة الفتح (تمرير المؤشّر أو التركيز) — يجلب التفاصيل مسبقاً. */
+  onPrefetch?: (ref: string) => void
 }) {
   const revealed = candidate.is_revealed
+  const prefetch = () => onPrefetch?.(candidate.ref)
 
   return (
-    <article className="flex flex-col gap-3.5 rounded-[16px] border border-[var(--k-border)] bg-surface p-[18px] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[var(--k-shadow-hover)]">
+    <article
+      onMouseEnter={prefetch}
+      onFocusCapture={prefetch}
+      onTouchStart={prefetch}
+      className="flex flex-col gap-3.5 rounded-[16px] border border-[var(--k-border)] bg-surface p-[18px] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[var(--k-shadow-hover)]"
+    >
       <header className="flex items-center justify-between gap-2">
         <span className="rounded-md bg-mint px-2.5 py-1 font-mono text-[11px] font-semibold text-primary">
           {formatRef(candidate.ref)}

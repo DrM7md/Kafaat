@@ -102,7 +102,7 @@ final class ProfileController extends Controller
 
         if ($this->completeness($profile) < 60) {
             throw ValidationException::withMessages([
-                'profile' => 'أكمل ملفّك (٦٠٪ على الأقل) قبل تقديمه للاعتماد.',
+                'profile' => 'أكمل ملفّك (60% على الأقل) قبل تقديمه للاعتماد.',
             ]);
         }
 
