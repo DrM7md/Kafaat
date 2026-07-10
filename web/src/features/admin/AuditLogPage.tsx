@@ -33,7 +33,7 @@ const CRITICAL = new Set([
 ])
 
 export function AuditLogPage() {
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ['admin', 'audit'],
     queryFn: async () => (await api.get<{ data: AuditLog[] }>('/admin/audit-logs')).data.data,
   })
@@ -48,6 +48,13 @@ export function AuditLogPage() {
       </header>
 
       {isPending && <p className="text-sm text-[var(--k-text-muted)]">جارٍ التحميل…</p>}
+
+      {isError && (
+        <div className="grid place-items-center rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
+          <p className="font-heading text-lg text-ink">تعذّر تحميل السجلّ</p>
+          <p className="mt-1 text-sm text-[var(--k-text-secondary)]">تأكّد من الاتصال ثم أعد المحاولة.</p>
+        </div>
+      )}
 
       {data !== undefined && data.length === 0 && (
         <p className="rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center text-sm text-[var(--k-text-muted)]">

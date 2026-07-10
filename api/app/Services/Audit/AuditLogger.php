@@ -26,9 +26,15 @@ final class AuditLogger
 
     public const PAYMENT_REFUNDED = 'payment.refunded';
 
+    /** مالٌ دخل ولم يُمكن ربطه بكشف. يحتاج تدخّلاً بشرياً — لا يُسقَط بصمت. */
+    public const PAYMENT_RECONCILIATION_REQUIRED = 'payment.reconciliation_required';
+
     // ── الإشراف ──
     /** مشرف رأى ملفّاً مكشوفاً بصلاحية الإشراف — أخطر فعل غير مالي. */
     public const PROFILE_VIEWED_AS_MODERATOR = 'profile.viewed_as_moderator';
+
+    /** مشرف تصفّح قائمة ملفّات مكشوفة. صفٌّ واحد للطلب، لا صفٌّ لكل مرشّح. */
+    public const PROFILE_LISTED_AS_MODERATOR = 'profile.listed_as_moderator';
 
     // ── الصلاحيات ──
     public const ROLE_PERMISSIONS_UPDATED = 'role.permissions_updated';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Payments;
 
+use App\Exceptions\PaymentsUnderDevelopmentException;
 use App\Models\Payment;
 use Illuminate\Support\Str;
 
@@ -68,16 +69,28 @@ final class ManualGateway implements PaymentGateway
         return true;
     }
 
+    /**
+     * لا سرَّ ثابتاً في المستودع: سرٌّ معروفٌ للعالم يعني webhook مزوَّراً.
+     *
+     * إن لم يُضبط `MANUAL_GATEWAY_SECRET` اشتُقَّ من `APP_KEY` — فيبقى
+     * فريداً لكل بيئة، وثابتاً بين الطلبات، بلا خطوة إعدادٍ إضافية للمطوّر.
+     */
     public function secret(): string
     {
-        return (string) config('services.manual_gateway.secret', 'kafaat-dev-secret');
+        $configured = (string) config('services.manual_gateway.secret', '');
+
+        if ($configured !== '') {
+            return $configured;
+        }
+
+        return hash('sha256', 'kafaat.manual_gateway|'.(string) config('app.key'));
     }
 
     private function assertNotProduction(): void
     {
         if (app()->isProduction()) {
-            throw new \RuntimeException(
-                'ManualGateway بوّابة تطوير. لا تُشغَّل في الإنتاج. اضبط billing.gateway على بوّابة حقيقية.'
+            throw new PaymentsUnderDevelopmentException(
+                'بوّابة التطوير لا تعمل في الإنتاج.'
             );
         }
     }

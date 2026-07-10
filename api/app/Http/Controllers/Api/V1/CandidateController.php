@@ -8,7 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MaskedProfileResource;
 use App\Models\EmployeeProfile;
 use App\Models\Lookup;
+use App\Services\Audit\AuditLogger;
 use App\Services\Masking\ProfileVisibilityService;
+use App\Support\Permissions;
+use App\Support\SettingKeys;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -16,7 +19,10 @@ use Illuminate\Support\Facades\Gate;
 
 final class CandidateController extends Controller
 {
-    public function __construct(private readonly ProfileVisibilityService $visibility) {}
+    public function __construct(
+        private readonly ProfileVisibilityService $visibility,
+        private readonly AuditLogger $audit,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -51,6 +57,14 @@ final class CandidateController extends Controller
 
         $profiles = $query->paginate((int) $request->integer('per_page', 20))->withQueryString();
 
+        // استعلامٌ واحد لكل الصفحة بدل استعلامٍ لكل مرشّح داخل الـ Resource.
+        $this->visibility->primeReveals(
+            $this->visibility->companyOf($request->user()),
+            $profiles->items(),
+        );
+
+        $this->auditModeratorListing($request, $profiles->items());
+
         return MaskedProfileResource::collection($profiles);
     }
 
@@ -59,9 +73,21 @@ final class CandidateController extends Controller
         // 404 لا 403: في هذا المجال، وجود الملفّ نفسه معلومةٌ لا تُمنَح.
         abort_unless(Gate::allows('view', $profile), 404);
 
+        // تُستدعى `visibleFields()` مرّتين في هذا الطلب (هنا، ثم داخل الـ
+        // Resource). استعلامٌ واحد يكفيهما.
+        $this->visibility->primeReveals($this->visibility->companyOf($request->user()), [$profile]);
+
         // يرمي ProfileNotVisibleException (404) إن كان الطالب صاحب العمل الحالي.
         // يسبق كل شيء: الوجود نفسه سرّ.
-        $this->visibility->visibleFields($request->user(), $profile);
+        $fields = $this->visibility->visibleFields($request->user(), $profile);
+
+        // صفٌّ واحد للمعاينة الواحدة. التسجيل هنا لا في خدمة الرؤية، لأنها
+        // تُستدعى مرّتين في هذا الطلب (هنا، ثم داخل الـ Resource).
+        if ($this->isModerator($request) && $fields->isFullyVisible()) {
+            $this->audit->log(AuditLogger::PROFILE_VIEWED_AS_MODERATOR, $profile, [
+                'ref' => $profile->ref,
+            ]);
+        }
 
         $profile->load([
             'user', 'field', 'city', 'employmentStatus', 'skills',
@@ -71,12 +97,35 @@ final class CandidateController extends Controller
         return MaskedProfileResource::make($profile)->detailed();
     }
 
+    /**
+     * صفٌّ واحد للطلب، لا صفٌّ لكل مرشّح: مشرفٌ يفتح `?per_page=50` كان
+     * يكتب خمسين صفّاً، فيغرق أخطر فعلٍ غير مالي في ضجيجٍ لا يُقرأ.
+     *
+     * @param  array<int, EmployeeProfile>  $profiles  ما تُعيده `paginate()->items()`
+     */
+    private function auditModeratorListing(Request $request, array $profiles): void
+    {
+        if ($profiles === [] || ! $this->isModerator($request)) {
+            return;
+        }
+
+        $this->audit->log(AuditLogger::PROFILE_LISTED_AS_MODERATOR, null, [
+            'count' => count($profiles),
+            'refs' => array_map(static fn (EmployeeProfile $p): string => $p->ref, $profiles),
+        ]);
+    }
+
+    private function isModerator(Request $request): bool
+    {
+        return $request->user()?->can(Permissions::PROFILE_MODERATE) === true;
+    }
+
     /** @param Builder<EmployeeProfile> $query */
     private function applyEmployerBlindness(Builder $query, Request $request): void
     {
         $company = $this->visibility->companyOf($request->user());
 
-        if ($company === null || ! (bool) settings('privacy.employer_blind', true)) {
+        if ($company === null || ! (bool) settings(SettingKeys::PRIVACY_EMPLOYER_BLIND, true)) {
             return;
         }
 
@@ -102,6 +151,10 @@ final class CandidateController extends Controller
         if ($term === '') {
             return;
         }
+
+        // `%` و`_` محارف بدلٍ في LIKE. `?q=%` كان يُطابق كل شيء، و`?q=_`
+        // يُطابق كل مسمّى بحرفٍ واحد: قناة استكشافٍ لا بحث. تُعامَل حرفياً.
+        $term = addcslashes($term, '%_\\');
 
         $query->where(function (Builder $q) use ($term) {
             $q->where('title', 'like', "%{$term}%")

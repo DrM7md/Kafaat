@@ -30,7 +30,7 @@ export function RoleMatrixPage() {
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null)
   const [draft, setDraft] = useState<Set<Permission> | null>(null)
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ['admin', 'roles'],
     queryFn: async () => (await api.get<RolesResponse>('/admin/roles')).data,
   })
@@ -45,6 +45,15 @@ export function RoleMatrixPage() {
       setSelectedRoleId(null)
     },
   })
+
+  if (isError) {
+    return (
+      <div className="grid place-items-center rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
+        <p className="font-heading text-lg text-ink">تعذّر تحميل الأدوار</p>
+        <p className="mt-1 text-sm text-[var(--k-text-secondary)]">تأكّد من الاتصال ثم أعد المحاولة.</p>
+      </div>
+    )
+  }
 
   if (isPending || data === undefined) {
     return <p className="py-16 text-center text-sm text-[var(--k-text-muted)]">جارٍ التحميل…</p>

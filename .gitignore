@@ -16,6 +16,10 @@
 /api/bootstrap/cache/*.php
 /api/auth.json
 
+# مخلّفات الطلبات المؤقّتة: أفرِغ مخرجات curl والتنقيح هنا، لا في جذر api/.
+# (تفادياً لتكرار d1.json / resp.json وأشباهها في المستودع.)
+/api/scratch/
+
 # ── الواجهة ──
 /web/node_modules
 /web/dist

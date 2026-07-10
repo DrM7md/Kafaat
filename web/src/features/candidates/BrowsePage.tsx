@@ -4,6 +4,7 @@ import { api, apiErrorMessage } from '@/shared/api/client'
 import type { Candidate, Lookup, Paginated } from '@/shared/api/types'
 import { CandidateCard } from '@/shared/ui/CandidateCard'
 import { useReveal } from './useReveal'
+import { useBillingUnderDevelopment } from '@/shared/hooks/usePublicSettings'
 import { formatNumber } from '@/shared/lib/format'
 
 type Filters = {
@@ -20,6 +21,7 @@ const EMPTY: Filters = { q: '', field: '', city: '', status: '', min_experience:
 export function BrowsePage() {
   const [filters, setFilters] = useState<Filters>(EMPTY)
   const reveal = useReveal()
+  const billingUnderDevelopment = useBillingUnderDevelopment()
 
   const lookups = useQuery({
     queryKey: ['lookups'],
@@ -44,6 +46,12 @@ export function BrowsePage() {
         onChange={setFilters}
         onReset={() => setFilters(EMPTY)}
       />
+
+      {billingUnderDevelopment && (
+        <p className="mb-4 rounded-xl border border-[var(--k-border)] bg-surface-muted p-3 text-sm text-[var(--k-text-secondary)]">
+          الدفع قيد التطوير — سيُفعَّل عند ربط بوّابة الدفع.
+        </p>
+      )}
 
       {reveal.isError && (
         <p className="mb-4 rounded-xl border border-[rgb(180_134_59/0.35)] bg-gold-tint p-3 text-sm text-[#96682A]">

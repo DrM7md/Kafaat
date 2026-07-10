@@ -4,9 +4,13 @@ import { api, apiErrorMessage } from '@/shared/api/client'
 import type { Lookup } from '@/shared/api/types'
 import { Field } from '@/features/auth/AuthShell'
 
+type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'rejected'
+
 type Profile = {
   ref: string
   title: string
+  approval_status: ApprovalStatus
+  rejection_reason: string | null
   field_id: number | null
   years_experience: number
   city_id: number | null
@@ -21,15 +25,40 @@ type Profile = {
   skills: { id: number; name: string }[]
 }
 
-/** نموذج التحرير: المهارات نصٌّ مفصولٌ بفواصل، لا مصفوفة كائنات. */
-type ProfileForm = Partial<Omit<Profile, 'skills'>> & { skills?: string }
+/**
+ * نموذج التحرير: المهارات نصٌّ مفصولٌ بفواصل، لا مصفوفة كائنات. ويضمّ حقولاً
+ * قابلة للتحرير يقبلها الـ API لكنّها ليست في استجابة العرض بعد.
+ */
+type ProfileForm = Partial<Omit<Profile, 'skills'>> & {
+  skills?: string
+  notice_period_clause?: string | null
+  penalty_amount?: number | null
+  current_employer_company_id?: number | null
+}
+
+/** الحقول التي يقبلها PUT /profile — كل ما عداها يملكه الخادم. */
+const EDITABLE_KEYS = [
+  'title',
+  'field_id',
+  'years_experience',
+  'city_id',
+  'employment_status_id',
+  'expected_salary_min',
+  'expected_salary_max',
+  'summary',
+  'notice_period_clause',
+  'penalty_amount',
+  'current_employer_company_id',
+  'current_employer_name',
+  'visibility',
+] as const
 
 export function MyProfilePage() {
   const queryClient = useQueryClient()
   const [form, setForm] = useState<ProfileForm>({})
   const [message, setMessage] = useState<string | null>(null)
 
-  const { data: profile } = useQuery({
+  const { data: profile, isPending, isError } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => (await api.get<{ profile: Profile }>('/profile')).data.profile,
   })
@@ -48,11 +77,15 @@ export function MyProfilePage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      const { skills, ...rest } = form
-      return api.put('/profile', {
-        ...rest,
-        skills: skills?.split('،').map((s) => s.trim()).filter(Boolean) ?? [],
-      })
+      // نُرسل الحقول القابلة للتحرير فقط. إرسال `{...form}` كان يبعث حقولاً
+      // يملكها الخادم (ref/completeness/published_at/approval_status/visibility…).
+      const payload: Record<string, unknown> = {
+        skills: form.skills?.split('،').map((s) => s.trim()).filter(Boolean) ?? [],
+      }
+      for (const key of EDITABLE_KEYS) {
+        if (form[key] !== undefined) payload[key] = form[key]
+      }
+      return api.put('/profile', payload)
     },
     onSuccess: async () => {
       setMessage('حُفظ ملفّك.')
@@ -67,11 +100,20 @@ export function MyProfilePage() {
     },
   })
 
-  if (profile === undefined) {
+  if (isPending) {
     return <p className="py-16 text-center text-sm text-[var(--k-text-muted)]">جارٍ التحميل…</p>
   }
 
-  const isPublished = profile.published_at !== null
+  if (isError || profile === undefined) {
+    return (
+      <div className="grid place-items-center rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
+        <p className="font-heading text-lg text-ink">تعذّر تحميل ملفّك</p>
+        <p className="mt-1 text-sm text-[var(--k-text-secondary)]">تأكّد من الاتصال ثم أعد المحاولة.</p>
+      </div>
+    )
+  }
+
+  const submitted = profile.published_at !== null
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
@@ -82,6 +124,8 @@ export function MyProfilePage() {
         </p>
       </header>
 
+      <ApprovalNotice status={profile.approval_status} reason={profile.rejection_reason} />
+
       <div className="rounded-[20px] border border-[var(--k-border)] bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -91,12 +135,13 @@ export function MyProfilePage() {
 
           <button
             type="button"
-            onClick={() => publish.mutate(isPublished ? 'unpublish' : 'publish')}
-            className={`cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold ${
-              isPublished ? 'bg-surface-muted text-ink' : 'bg-primary text-white'
+            disabled={publish.isPending}
+            onClick={() => publish.mutate(submitted ? 'unpublish' : 'publish')}
+            className={`cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${
+              submitted ? 'bg-surface-muted text-ink' : 'bg-primary text-white'
             }`}
           >
-            {isPublished ? 'سحب من التصفّح' : 'نشر الملفّ'}
+            {submitted ? 'سحب الطلب' : 'تقديم للاعتماد'}
           </button>
         </div>
 
@@ -204,6 +249,44 @@ export function MyProfilePage() {
           {save.isPending ? 'جارٍ الحفظ…' : 'حفظ'}
         </button>
       </form>
+    </div>
+  )
+}
+
+/** الموظّف يعرف أين ملفّه من دورة الاعتماد — لا يُترك في العماء. */
+function ApprovalNotice({ status, reason }: { status: ApprovalStatus; reason: string | null }) {
+  if (status === 'draft') return null
+
+  const styles = {
+    pending: {
+      border: 'rgb(180 134 59 / 0.35)',
+      bg: 'var(--k-gold-tint)',
+      color: '#96682A',
+      title: 'طلبك قيد المراجعة',
+      body: 'يراجع المشرف ملفّك. لن يظهر لأي شركة قبل اعتماده.',
+    },
+    approved: {
+      border: 'rgb(47 163 92 / 0.35)',
+      bg: '#E7F3EA',
+      color: '#1E7A44',
+      title: 'ملفّك معتمَد وظاهر للشركات',
+      body: 'هويّتك ما زالت محجوبة حتى تدفع شركةٌ رسم الكشف.',
+    },
+    rejected: {
+      border: 'rgb(200 60 60 / 0.35)',
+      bg: 'rgb(200 60 60 / 0.06)',
+      color: '#8a2b2b',
+      title: 'رُفض طلبك',
+      body: reason ?? 'راجع ملفّك ثم قدّمه من جديد.',
+    },
+  }[status]
+
+  return (
+    <div
+      className="rounded-xl border p-3.5 text-[13px]"
+      style={{ borderColor: styles.border, background: styles.bg, color: styles.color }}
+    >
+      <strong>{styles.title}</strong> — {styles.body}
     </div>
   )
 }

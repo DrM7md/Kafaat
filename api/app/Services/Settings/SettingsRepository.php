@@ -76,7 +76,7 @@ final class SettingsRepository
     {
         $setting = Setting::query()->findOrFail($key);
 
-        $this->guard($key, $value, $confirmed);
+        $this->guard($setting, $value, $confirmed);
 
         $before = $this->cast($setting);
 
@@ -105,9 +105,9 @@ final class SettingsRepository
      *
      * @throws ValidationException
      */
-    private function guard(string $key, mixed $value, bool $confirmed): void
+    private function guard(Setting $setting, mixed $value, bool $confirmed): void
     {
-        $setting = Setting::query()->findOrFail($key);
+        $this->guardType($setting, $value);
 
         // القيم المحصورة
         if ($setting->type === 'enum' && $setting->options !== null && ! in_array($value, $setting->options, true)) {
@@ -118,7 +118,7 @@ final class SettingsRepository
 
         // ★ رفع الحجب عن الاسم أو الهاتف أو البريد يعني منح المنتج مجّاناً.
         // لا يقع صدفةً: يتطلّب تأكيداً صريحاً من اللوحة.
-        if ($key === SettingKeys::MASKING_FIELDS && ! $confirmed) {
+        if ($setting->key === SettingKeys::MASKING_FIELDS && ! $confirmed) {
             $removed = array_diff(SettingKeys::protectedMaskedFields(), (array) $value);
 
             if ($removed !== []) {
@@ -127,6 +127,32 @@ final class SettingsRepository
                         .'التواصل مرئيةً للجميع بلا دفع. أرسل confirmed=true للمتابعة.',
                 ]);
             }
+        }
+    }
+
+    /**
+     * النوع يُتحقَّق منه عند **الكتابة**، لا عند القراءة.
+     *
+     * `cast()` صبٌّ أعمى: النصّ `"false"` يصير `true`، و`"abc"` تصير `0`.
+     * فإعدادٌ منطقيٌّ يُطفَأ بنصٍّ خاطئ كان **يُشعَل**، ورسمُ الكشف يصير
+     * صفراً. الرفض عند الباب أرحم من صبٍّ صامت.
+     *
+     * @throws ValidationException
+     */
+    private function guardType(Setting $setting, mixed $value): void
+    {
+        $ok = match ($setting->type) {
+            'int' => is_int($value) || (is_string($value) && ctype_digit(ltrim($value, '-'))),
+            'bool' => is_bool($value),
+            'string', 'enum' => is_string($value),
+            'array', 'json' => is_array($value),
+            default => true,
+        };
+
+        if (! $ok) {
+            throw ValidationException::withMessages([
+                'value' => "القيمة لا تطابق نوع الإعداد ({$setting->type}).",
+            ]);
         }
     }
 

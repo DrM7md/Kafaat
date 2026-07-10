@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
+use App\Http\Controllers\Api\V1\Admin\CandidateApprovalController;
+use App\Http\Controllers\Api\V1\Admin\CompanyController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
 use App\Http\Controllers\Api\V1\AttachmentController;
@@ -107,5 +109,29 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/audit-logs', AuditLogController::class)
             ->middleware('can:'.P::AUDIT_VIEW)->name('audit.index');
+
+        // ── الشركات ──
+        Route::get('/companies', [CompanyController::class, 'index'])
+            ->middleware('can:'.P::COMPANY_VIEW)->name('companies.index');
+        Route::get('/companies/{company}', [CompanyController::class, 'show'])
+            ->middleware('can:'.P::COMPANY_VIEW)->name('companies.show');
+        Route::put('/companies/{company}/verification', [CompanyController::class, 'verify'])
+            ->middleware('can:'.P::COMPANY_APPROVE)->name('companies.verify');
+        Route::delete('/companies/bulk', [CompanyController::class, 'bulkDestroy'])
+            ->middleware('can:'.P::USER_MANAGE)->name('companies.bulk');
+        Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])
+            ->middleware('can:'.P::USER_MANAGE)->name('companies.destroy');
+
+        // ── طلبات اعتماد الكفاءات (القائمة محجوبة عمداً) ──
+        Route::get('/candidates', [CandidateApprovalController::class, 'index'])
+            ->middleware('can:'.P::PROFILE_APPROVE)->name('candidates.index');
+        Route::post('/candidates/{profile}/approve', [CandidateApprovalController::class, 'approve'])
+            ->middleware('can:'.P::PROFILE_APPROVE)->name('candidates.approve');
+        Route::post('/candidates/{profile}/reject', [CandidateApprovalController::class, 'reject'])
+            ->middleware('can:'.P::PROFILE_APPROVE)->name('candidates.reject');
+        Route::delete('/candidates/bulk', [CandidateApprovalController::class, 'bulkDestroy'])
+            ->middleware('can:'.P::USER_MANAGE)->name('candidates.bulk');
+        Route::delete('/candidates/{profile}', [CandidateApprovalController::class, 'destroy'])
+            ->middleware('can:'.P::USER_MANAGE)->name('candidates.destroy');
     });
 });

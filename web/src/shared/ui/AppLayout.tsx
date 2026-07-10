@@ -30,6 +30,12 @@ export function AppLayout() {
             <Can permission="profile.update">
               <NavItem to="/profile">ملفّي المهني</NavItem>
             </Can>
+            <Can permission="profile.approve">
+              <NavItem to="/admin/candidates">طلبات الكفاءات</NavItem>
+            </Can>
+            <Can permission="company.view">
+              <NavItem to="/admin/companies">الشركات</NavItem>
+            </Can>
             <Can permission="rbac.manage">
               <NavItem to="/admin/roles">الأدوار</NavItem>
             </Can>
@@ -37,7 +43,7 @@ export function AppLayout() {
               <NavItem to="/admin/settings">الإعدادات</NavItem>
             </Can>
             <Can permission="audit.view">
-              <NavItem to="/admin/audit">سجلّ التدقيق</NavItem>
+              <NavItem to="/admin/audit">التدقيق</NavItem>
             </Can>
           </nav>
 

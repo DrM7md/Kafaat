@@ -1,16 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
-import { api } from '@/shared/api/client'
+import { api, apiErrorMessage } from '@/shared/api/client'
 import type { Candidate } from '@/shared/api/types'
 import { MaskedAvatar } from '@/shared/ui/MaskedAvatar'
 import { StatusBadge, SkillChip } from '@/shared/ui/StatusBadge'
 import { RevealButton } from '@/shared/ui/RevealButton'
 import { useReveal } from './useReveal'
+import { useBillingUnderDevelopment } from '@/shared/hooks/usePublicSettings'
 import { formatRef, formatSalary, formatYears } from '@/shared/lib/format'
 
 export function CandidateDetailPage() {
   const { ref = '' } = useParams()
   const reveal = useReveal()
+  const billingUnderDevelopment = useBillingUnderDevelopment()
 
   const { data, isPending, isError } = useQuery({
     queryKey: ['candidates', 'detail', ref],
@@ -126,6 +128,18 @@ export function CandidateDetailPage() {
               </p>
             )}
           </div>
+        )}
+
+        {billingUnderDevelopment && (
+          <p className="mb-4 rounded-xl border border-[var(--k-border)] bg-surface-muted p-3 text-sm text-[var(--k-text-secondary)]">
+            الدفع قيد التطوير — سيُفعَّل عند ربط بوّابة الدفع.
+          </p>
+        )}
+
+        {reveal.isError && (
+          <p className="mb-4 rounded-xl border border-[rgb(180_134_59/0.35)] bg-gold-tint p-3 text-sm text-[#96682A]">
+            {apiErrorMessage(reveal.error)}
+          </p>
         )}
 
         <RevealButton

@@ -36,6 +36,18 @@ export function HomePage() {
           />
         </Can>
 
+        <Can permission="profile.approve">
+          <Card
+            to="/admin/candidates"
+            title="طلبات الكفاءات"
+            body="راجع الملفّات المُقدَّمة واعتمدها. لا يظهر ملفٌّ لأي شركة قبل اعتماده."
+          />
+        </Can>
+
+        <Can permission="company.view">
+          <Card to="/admin/companies" title="الشركات" body="توثيق الشركات، ومتابعة طلبات الكشف ومدفوعاتها." />
+        </Can>
+
         <Can permission="rbac.manage">
           <Card to="/admin/roles" title="الأدوار والصلاحيات" body="أنشئ أدواراً ووزّع الصلاحيات دون تعديل برمجي." />
         </Can>

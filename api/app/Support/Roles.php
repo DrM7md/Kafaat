@@ -54,6 +54,7 @@ final class Roles
             self::CONTENT_MODERATOR => [
                 Permissions::PROFILE_VIEW,
                 Permissions::PROFILE_MODERATE,
+                Permissions::PROFILE_APPROVE,
                 Permissions::COMPANY_VIEW,
             ],
 

@@ -28,7 +28,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient()
   const [activeGroup, setActiveGroup] = useState('billing')
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ['admin', 'settings'],
     queryFn: async () => (await api.get<{ settings: Record<string, Setting[]> }>('/admin/settings')).data.settings,
   })
@@ -42,6 +42,15 @@ export function SettingsPage() {
       await queryClient.invalidateQueries({ queryKey: ['candidates'] })
     },
   })
+
+  if (isError) {
+    return (
+      <div className="grid place-items-center rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
+        <p className="font-heading text-lg text-ink">تعذّر تحميل الإعدادات</p>
+        <p className="mt-1 text-sm text-[var(--k-text-secondary)]">تأكّد من الاتصال ثم أعد المحاولة.</p>
+      </div>
+    )
+  }
 
   if (isPending || data === undefined) {
     return <p className="py-16 text-center text-sm text-[var(--k-text-muted)]">جارٍ التحميل…</p>

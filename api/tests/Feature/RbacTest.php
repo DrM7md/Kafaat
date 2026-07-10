@@ -78,6 +78,30 @@ it('٥ — المشرف العام ينجح في كل شيء عبر Gate::before
     }
 });
 
+it('★ /me تُرسل للمشرف العام كتالوج الصلاحيات كاملاً', function () {
+    // كانت effectivePermissions() تقرأ getAllPermissions() — وهي فارغة
+    // للمشرف العام. فأخفت الواجهةُ اللوحةَ كلّها عنه. الآن تُحسب عبر الـ Gate،
+    // فتحترم Gate::before.
+    $admin = User::factory()->create();
+    $admin->assignRole(Roles::SUPER_ADMIN);
+
+    $permissions = $this->actingAs($admin)->getJson('/api/v1/me')->assertOk()->json('permissions');
+
+    expect($permissions)->toHaveCount(count(Permissions::all()))
+        ->toContain('settings.update', 'rbac.manage', 'audit.view', 'user.manage');
+});
+
+it('★ /me لا تُسرّب صلاحياتٍ لا يملكها المستخدم', function () {
+    $company = User::factory()->create();
+    $company->assignRole(Roles::COMPANY);
+
+    $permissions = $this->actingAs($company)->getJson('/api/v1/me')->assertOk()->json('permissions');
+
+    expect($permissions)->toContain('candidate.browse', 'candidate.reveal')
+        ->not->toContain('settings.update')
+        ->not->toContain('rbac.manage');
+});
+
 it('٦ — نزع صلاحية من دور يُفقدها المستخدمين فوراً', function () {
     $user = User::factory()->create();
     $user->assignRole(Roles::COMPANY);

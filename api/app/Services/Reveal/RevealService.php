@@ -128,21 +128,16 @@ final class RevealService
     }
 
     /**
-     * خصم رصيد الاشتراك.
+     * خصم رصيد الاشتراك — **غير منفَّذ بعد** (features.subscriptions = false).
      *
-     * ⚠️ `lockForUpdate()` هنا ليس زينة: بلا قفل الصفّ، طلبان متزامنان
-     *    يقرآن الرصيد نفسه ويخصمان مرّتين من رصيدٍ يكفي واحداً.
-     *    (ولهذا نختبر على MySQL: SQLite تتجاهل القفل بصمت — ADR-015.)
+     * لا معاملةَ ولا قفلَ هنا: لا شيء يُقرأ ولا يُكتب. كانا يوهمان القارئ
+     * بمنطقٍ قائم. حين يصل جدول الأرصدة يعود `lockForUpdate()` — وبلا قفلٍ
+     * يقرأ طلبان متزامنان الرصيد نفسه فيخصمان مرّتين من رصيدٍ يكفي واحداً.
+     * (ولهذا نختبر على MySQL: SQLite تتجاهل القفل بصمت — ADR-015.)
      */
     private function revealBySubscription(CompanyProfile $company): RevealResult
     {
-        return DB::transaction(function () use ($company): RevealResult {
-            $locked = CompanyProfile::query()->lockForUpdate()->findOrFail($company->id);
-
-            // الاشتراكات مؤجّلة خارج MVP (features.subscriptions = false).
-            // البنية والقفل جاهزان؛ جدول الأرصدة يأتي مع تفعيل الميزة.
-            throw new InsufficientCreditsException($locked->id);
-        });
+        throw new InsufficientCreditsException($company->id);
     }
 
     /**
@@ -156,8 +151,11 @@ final class RevealService
         return DB::transaction(function () use ($payment): ?CandidateReveal {
             $payment = Payment::query()->lockForUpdate()->find($payment->id);
 
-            if ($payment === null || $payment->status === PaymentStatus::Paid) {
-                return null;   // إعادة تشغيل الـ webhook: أثرٌ واحد لا اثنان.
+            // استقرّ المال ⇒ لا أثر ثانياً. البوّابات تُعيد إرسال الأحداث
+            // وتخلط ترتيبها؛ بلا هذا الحارس يتكرّر صفّ التدقيق ويصل الموظّف
+            // إشعارٌ ثانٍ بأن شركةً اطّلعت على ملفّه.
+            if ($payment === null || $payment->status->isSettled()) {
+                return null;
             }
 
             // forceFill للطوابع الزمنية: تُكتب من النظام لا من مدخلات المستخدم،
@@ -166,10 +164,26 @@ final class RevealService
 
             $reveal = CandidateReveal::query()->where('payment_id', $payment->id)->firstOrFail();
 
-            $reveal->forceFill([
-                'status' => RevealStatus::Completed,
-                'revealed_at' => now(),
-            ])->save();
+            // الدفعة كانت `failed` وعادت `paid` (تحقّقٌ متأخّر). إن كانت الشركة
+            // قد بدأت كشفاً جديداً لنفس المرشّح فالخانة مشغولة، ويصطدم الفهرس
+            // الفريد. المال دخل: لا نُسقطه ولا ننهار — نُصعّده للمراجعة اليدوية.
+            try {
+                $reveal->forceFill([
+                    'status' => RevealStatus::Completed,
+                    'revealed_at' => now(),
+                ])->save();
+            } catch (QueryException $e) {
+                if (! $this->isUniqueViolation($e)) {
+                    throw $e;
+                }
+
+                $this->audit->log(AuditLogger::PAYMENT_RECONCILIATION_REQUIRED, $payment, [
+                    'reveal_id' => $reveal->id,
+                    'reason' => 'دفعةٌ نجحت بعد فشلها، وللزوج (شركة، موظّف) كشفٌ نشط آخر.',
+                ]);
+
+                return null;
+            }
 
             $this->audit->log(AuditLogger::CANDIDATE_REVEALED, $reveal->employeeProfile, [
                 'company_profile_id' => $reveal->company_profile_id,
@@ -184,19 +198,66 @@ final class RevealService
     }
 
     /**
+     * ★ فشل الدفع ⇒ يفشل الكشف معه. يُستدعى من الـ webhook فقط.
+     *
+     * كان الفشل يمسّ صفّ الدفعة وحده، فيبقى الكشف `pending` إلى الأبد.
+     * والعمود المولَّد `active_reveal_key` يعدّ `pending` خانةً مشغولة،
+     * فيرفض الفهرس الفريد أي محاولةٍ لاحقة: **الشركة تُحرَم من هذا المرشّح
+     * للأبد** برسالة «طلبٌ آخر قيد المعالجة». `failed` تُخلي الخانة.
+     */
+    public function failFromPayment(Payment $payment): void
+    {
+        DB::transaction(function () use ($payment): void {
+            $payment = Payment::query()->lockForUpdate()->find($payment->id);
+
+            // دفعةٌ استقرّت لا تُخفَّض. حدث فشلٍ مُعاد بعد النجاح كان يُرجعها
+            // إلى `failed`، فيجتاز حدثُ نجاحٍ مُعادٌ بعده حارسَ التكرار.
+            if ($payment === null || $payment->status !== PaymentStatus::Pending) {
+                return;
+            }
+
+            $payment->forceFill(['status' => PaymentStatus::Failed])->save();
+
+            CandidateReveal::query()
+                ->where('payment_id', $payment->id)
+                ->where('status', RevealStatus::Pending)
+                ->update(['status' => RevealStatus::Failed]);
+        });
+    }
+
+    /**
      * ADR-010: الاسترداد يُعيد الحجب فوراً. إبقاء الوصول بعد ردّ المال
      * خدمةٌ بلا مقابل — خطأ منطقي وقانوني.
+     *
+     * ⚠️ القفل والحارس ليسا زينة: نداءان متزامنان (أو زرٌّ مضغوط مرّتين)
+     *    كانا يُصدران استرداداً مزدوجاً من البوّابة — مالٌ يخرج مرّتين
+     *    مقابل فاتورةٍ واحدة. `RefundNotAllowedException` تُوقف الثاني.
+     *
+     * @throws RefundNotAllowedException
      */
     public function refund(CandidateReveal $reveal): void
     {
-        DB::transaction(function () use ($reveal) {
+        DB::transaction(function () use ($reveal): void {
+            /** @var CandidateReveal|null $locked */
+            $locked = CandidateReveal::query()->lockForUpdate()->find($reveal->id);
+
+            if ($locked === null || $locked->status !== RevealStatus::Completed) {
+                throw new RefundNotAllowedException($reveal->id);
+            }
+
             $percentage = (int) settings(SettingKeys::REFUND_PERCENTAGE, 100);
-            $amount = (int) round($reveal->amount * $percentage / 100);
+            $amount = (int) round($locked->amount * $percentage / 100);
 
-            if ($reveal->payment !== null) {
-                $this->gateway->refund($reveal->payment, $amount);
+            $payment = $locked->payment;
 
-                $reveal->payment->forceFill([
+            if ($payment !== null) {
+                if ($payment->status !== PaymentStatus::Paid) {
+                    throw new RefundNotAllowedException($reveal->id);
+                }
+
+                $this->gateway->refund($payment, $amount);
+
+                $payment->forceFill([
                     'status' => PaymentStatus::Refunded,
                     'refunded_at' => now(),
                 ])->save();
@@ -205,10 +266,10 @@ final class RevealService
             if ((bool) settings(SettingKeys::REFUND_REBLOCKS_ACCESS, true)) {
                 // بتحوّل الحالة إلى `refunded` يصبح العمود المولَّد NULL،
                 // فتتحرّر الخانة ويصبح كشفٌ جديد مدفوع ممكناً.
-                $reveal->forceFill(['status' => RevealStatus::Refunded, 'refunded_at' => now()])->save();
+                $locked->forceFill(['status' => RevealStatus::Refunded, 'refunded_at' => now()])->save();
             }
 
-            $this->audit->log(AuditLogger::PAYMENT_REFUNDED, $reveal, [
+            $this->audit->log(AuditLogger::PAYMENT_REFUNDED, $locked, [
                 'amount' => $amount,
                 'percentage' => $percentage,
             ]);

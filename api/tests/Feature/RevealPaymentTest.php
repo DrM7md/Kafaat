@@ -171,11 +171,14 @@ it('★ webhook بمبلغٍ مخالف لا يفكّ الحجب', function () {
     $payment = Payment::firstOrFail();
     [$body, $signature] = signedWebhook(webhook($payment->provider_ref, 1));
 
+    // 200 لا 422: إعادة المحاولة لن تُغيّر المبلغ، فلا نُغرق البوّابة بحلقة
+    // إعادةٍ أبدية. المهمّ أن الحجب **لم يُفكّ** والحدث مُسجَّل في `payload`.
     $this->call('POST', '/api/v1/payments/webhook/manual', [], [], [],
         ['HTTP_X_SIGNATURE' => $signature, 'CONTENT_TYPE' => 'application/json'], $body)
-        ->assertStatus(422);
+        ->assertOk();
 
-    expect(CandidateReveal::firstOrFail()->status)->toBe(RevealStatus::Pending);
+    expect(CandidateReveal::firstOrFail()->status)->toBe(RevealStatus::Pending)
+        ->and(Payment::firstOrFail()->status)->toBe(PaymentStatus::Pending);
 });
 
 it('★ كشفٌ سابق صالح يُعيد 200 بلا خصمٍ جديد', function () {

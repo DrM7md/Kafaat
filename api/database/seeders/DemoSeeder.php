@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\ProfileVisibility;
 use App\Enums\UserStatus;
 use App\Enums\UserType;
@@ -54,6 +55,22 @@ class DemoSeeder extends Seeder
                 'title' => 'أخصائية موارد بشرية', 'field' => 'hr', 'exp' => 5, 'city' => 'doha',
                 'status' => 'open', 'skills' => ['استقطاب', 'تقييم', 'سياسات'],
                 'salary' => [15000, 20000], 'featured' => false, 'employer' => null,
+            ],
+
+            // ── طلبان ينتظران اعتماد المشرف: لا يظهران في التصفّح ──
+            [
+                'name' => 'سارة الهاجري', 'email' => 's.alhajri@mail.qa', 'phone' => '+974 66 12 34 56',
+                'title' => 'مهندسة بيانات', 'field' => 'it', 'exp' => 4, 'city' => 'al-rayyan',
+                'status' => 'open', 'skills' => ['Python', 'SQL', 'Spark'],
+                'salary' => [17000, 23000], 'featured' => false, 'employer' => null,
+                'approval' => ApprovalStatus::Pending,
+            ],
+            [
+                'name' => 'خالد العطية', 'email' => 'k.alattiyah@mail.qa', 'phone' => '+974 55 98 76 54',
+                'title' => 'مدير مشاريع إنشائية', 'field' => 'engineering', 'exp' => 12, 'city' => 'al-khor',
+                'status' => 'leaving', 'skills' => ['PMP', 'عقود', 'جدولة'],
+                'salary' => [28000, 35000], 'featured' => false, 'employer' => null,
+                'approval' => ApprovalStatus::Pending,
             ],
         ];
 
@@ -108,9 +125,15 @@ class DemoSeeder extends Seeder
         /** @var array{0: int, 1: int} $salary */
         $salary = $row['salary'];
 
+        /** @var ApprovalStatus $approval */
+        $approval = $row['approval'] ?? ApprovalStatus::Approved;
+
         $profile = EmployeeProfile::firstOrCreate(
             ['user_id' => $user->id],
             [
+                'approval_status' => $approval,
+                'submitted_at' => now()->subDays(2),
+                'approved_at' => $approval === ApprovalStatus::Approved ? now() : null,
                 'title' => $row['title'],
                 'field_id' => $this->lookupId(Lookup::FIELD, (string) $row['field']),
                 'years_experience' => $row['exp'],

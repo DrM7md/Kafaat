@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\ProfileVisibility;
 use Database\Factories\EmployeeProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -24,6 +26,11 @@ use Illuminate\Support\Str;
  * @property int $years_experience
  * @property int|null $current_employer_company_id
  * @property ProfileVisibility $visibility
+ * @property ApprovalStatus $approval_status
+ * @property Carbon|null $submitted_at
+ * @property Carbon|null $approved_at
+ * @property Carbon|null $published_at
+ * @property int $completeness
  */
 #[Fillable([
     'title', 'field_id', 'years_experience', 'city_id', 'employment_status_id',
@@ -77,6 +84,9 @@ class EmployeeProfile extends Model
     {
         return [
             'visibility' => ProfileVisibility::class,
+            'approval_status' => ApprovalStatus::class,
+            'submitted_at' => 'datetime',
+            'approved_at' => 'datetime',
             'is_featured' => 'boolean',
             'published_at' => 'datetime',
         ];
@@ -143,20 +153,30 @@ class EmployeeProfile extends Model
     }
 
     /**
-     * الملفّات القابلة للتصفّح: منشورة وظاهرة فقط.
+     * الملفّات القابلة للتصفّح: ظاهرة · منشورة · **ومعتمَدة**.
+     *
+     * ★ الشروط الثلاثة معاً. طلبٌ قُدِّم ولم يُعتمَد بعد لا يظهر لأي شركة.
      *
      * @param  Builder<$this>  $query
      */
     public function scopeBrowsable(Builder $query): void
     {
         $query->where('visibility', ProfileVisibility::Public)
-            ->whereNotNull('published_at');
+            ->whereNotNull('published_at')
+            ->where('approval_status', ApprovalStatus::Approved);
     }
 
+    /** هل هذا الملفّ ظاهرٌ للشركات فعلاً؟ */
     public function isPublished(): bool
     {
         return $this->published_at !== null
-            && $this->visibility === ProfileVisibility::Public;
+            && $this->visibility === ProfileVisibility::Public
+            && $this->approval_status->isBrowsable();
+    }
+
+    public function isAwaitingApproval(): bool
+    {
+        return $this->approval_status === ApprovalStatus::Pending;
     }
 
     /**

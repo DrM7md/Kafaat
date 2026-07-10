@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\AttachmentType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AttachmentResource;
@@ -79,24 +80,54 @@ final class ProfileController extends Controller
         return response()->json(['profile' => $profile->fresh(['skills'])]);
     }
 
+    /**
+     * تقديم الملفّ للاعتماد.
+     *
+     * النشر رغبةُ الموظّف، والاعتماد قرارُ المنصّة. الملفّ لا يظهر لأي شركة
+     * قبل موافقة مشرفٍ يملك `profile.approve`.
+     */
     public function publish(Request $request): JsonResponse
     {
         $profile = $this->ownProfile($request);
 
-        if ($this->completeness($profile) < 60) {
-            throw ValidationException::withMessages([
-                'profile' => 'أكمل ملفّك (٦٠٪ على الأقل) قبل النشر.',
+        // الطلب المقدَّم أصلاً لا يُعاد التحقّق منه ولا يُعاد ختمه بتاريخٍ جديد:
+        // وإلّا قفز صاحبُه إلى مقدّمة طابور المراجعة بضغطة زرّ.
+        if ($profile->isAwaitingApproval()) {
+            return response()->json([
+                'message' => 'طلبك قيد المراجعة بالفعل.',
+                'ref' => $profile->ref,
+                'approval_status' => $profile->approval_status->value,
             ]);
         }
 
-        $profile->update(['published_at' => now()]);
+        if ($this->completeness($profile) < 60) {
+            throw ValidationException::withMessages([
+                'profile' => 'أكمل ملفّك (٦٠٪ على الأقل) قبل تقديمه للاعتماد.',
+            ]);
+        }
 
-        return response()->json(['message' => 'نُشر ملفّك.', 'ref' => $profile->ref]);
+        $profile->forceFill([
+            'published_at' => now(),
+            'approval_status' => ApprovalStatus::Pending,
+            'submitted_at' => now(),
+            'rejection_reason' => null,
+        ])->save();
+
+        return response()->json([
+            'message' => 'قُدِّم ملفّك للاعتماد. سيظهر للشركات بعد موافقة المشرف.',
+            'ref' => $profile->ref,
+            'approval_status' => $profile->approval_status->value,
+        ]);
     }
 
     public function unpublish(Request $request): JsonResponse
     {
-        $this->ownProfile($request)->update(['published_at' => null]);
+        // السحب يُعيد الملفّ مسودّةً: إعادة النشر تعني طلباً جديداً.
+        $this->ownProfile($request)->forceFill([
+            'published_at' => null,
+            'approval_status' => ApprovalStatus::Draft,
+            'submitted_at' => null,
+        ])->save();
 
         return response()->json(['message' => 'سُحب ملفّك من التصفّح.']);
     }

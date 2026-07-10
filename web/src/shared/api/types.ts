@@ -7,7 +7,8 @@
  */
 
 export type Permission =
-  | 'profile.view' | 'profile.create' | 'profile.update' | 'profile.moderate' | 'profile.publish'
+  | 'profile.view' | 'profile.create' | 'profile.update' | 'profile.moderate'
+  | 'profile.publish' | 'profile.approve'
   | 'candidate.browse' | 'candidate.reveal' | 'candidate.contact' | 'candidate.grant_reveal'
   | 'company.view' | 'company.approve' | 'company.suspend'
   | 'payment.view' | 'payment.refund' | 'subscription.manage'

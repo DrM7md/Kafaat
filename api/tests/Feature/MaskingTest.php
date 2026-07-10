@@ -268,6 +268,30 @@ it('١٢ — صلاحية الإشراف تكشف الحقول وتكتب أثر
     ]);
 });
 
+it('★ ذاكرة الكشف لا تُسمَّم: تصفّحٌ محجوب ثم كشفٌ ثم قراءةٌ مكشوفة', function () {
+    $company = companyUser();
+    $profile = EmployeeProfile::factory()->create();
+
+    // 1) قراءة تُهيّئ ذاكرة «لا كشف» لهذا الزوج.
+    $this->actingAs($company->user)->getJson('/api/v1/candidates')->assertOk();
+    $this->actingAs($company->user)->getJson("/api/v1/candidates/{$profile->ref}")->assertOk();
+
+    // 2) يقع الكشف.
+    CandidateReveal::factory()->completed()->create([
+        'company_profile_id' => $company->id,
+        'employee_profile_id' => $profile->id,
+    ]);
+
+    // 3) القراءة التالية يجب أن تراه مكشوفاً. ذاكرةٌ تكتب `false` ولا تُبطَل
+    //    كانت تُبقي الحجب بعد الدفع — أسوأ عطبٍ ممكن في هذا المنتج.
+    $data = $this->actingAs($company->user)
+        ->getJson("/api/v1/candidates/{$profile->ref}")
+        ->assertOk()
+        ->json('data');
+
+    expect($data)->toHaveKey('name')->and($data['is_revealed'])->toBeTrue();
+});
+
 it('غير المصادَق لا يصل إلى التصفّح إطلاقاً', function () {
     $this->getJson('/api/v1/candidates')->assertUnauthorized();
 });

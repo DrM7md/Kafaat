@@ -25,6 +25,15 @@ final class Permissions
 
     public const PROFILE_PUBLISH = 'profile.publish';
 
+    /**
+     * اعتماد طلبات نشر الملفّات أو رفضها.
+     *
+     * ⚠️ ليست `profile.moderate`: من يعتمد لا يحتاج أن يرى الاسم وبيانات
+     * التواصل. قائمة الطلبات **محجوبة كسائر القوائم** — المراجعة تقع على
+     * جودة الملفّ (المسمّى، النبذة، المهارات، الاكتمال) لا على هويّة صاحبه.
+     */
+    public const PROFILE_APPROVE = 'profile.approve';
+
     // ── الكشف ──
     public const CANDIDATE_BROWSE = 'candidate.browse';
 
@@ -82,6 +91,7 @@ final class Permissions
                 self::PROFILE_UPDATE,
                 self::PROFILE_MODERATE,
                 self::PROFILE_PUBLISH,
+                self::PROFILE_APPROVE,
             ],
             'الكشف' => [
                 self::CANDIDATE_BROWSE,

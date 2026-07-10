@@ -7,7 +7,7 @@ return [
      * في الإنتاج تُستبدل ببوّابة حقيقية — ManualGateway يرفض العمل هناك.
      */
     'manual_gateway' => [
-        'secret' => env('MANUAL_GATEWAY_SECRET', 'kafaat-dev-secret'),
+        'secret' => env('MANUAL_GATEWAY_SECRET'),
     ],
 
     /*

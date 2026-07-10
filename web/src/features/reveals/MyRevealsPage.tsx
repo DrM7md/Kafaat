@@ -19,7 +19,7 @@ const STATUS: Record<Reveal['status'], { label: string; bg: string; color: strin
 }
 
 export function MyRevealsPage() {
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ['reveals'],
     queryFn: async () => (await api.get<{ data: Reveal[] }>('/reveals')).data.data,
   })
@@ -34,6 +34,13 @@ export function MyRevealsPage() {
       </header>
 
       {isPending && <p className="text-sm text-[var(--k-text-muted)]">جارٍ التحميل…</p>}
+
+      {isError && (
+        <div className="grid place-items-center rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
+          <p className="font-heading text-lg text-ink">تعذّر تحميل كشوفاتك</p>
+          <p className="mt-1 text-sm text-[var(--k-text-secondary)]">تأكّد من الاتصال ثم أعد المحاولة.</p>
+        </div>
+      )}
 
       {data !== undefined && data.length === 0 && (
         <p className="rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center text-sm text-[var(--k-text-muted)]">

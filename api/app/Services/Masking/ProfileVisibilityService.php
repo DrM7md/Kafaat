@@ -9,7 +9,6 @@ use App\Models\CandidateReveal;
 use App\Models\CompanyProfile;
 use App\Models\EmployeeProfile;
 use App\Models\User;
-use App\Services\Audit\AuditLogger;
 use App\Support\Permissions;
 use App\Support\SettingKeys;
 
@@ -22,7 +21,15 @@ use App\Support\SettingKeys;
  */
 final class ProfileVisibilityService
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    /**
+     * ذاكرة الطلب الواحد: "{company_id}:{profile_id}" ⇒ أللشركة كشفٌ صالح؟
+     *
+     * الخدمة مسجَّلة `scoped` (AppServiceProvider)، فالذاكرة تحيا مع الطلب
+     * وتموت معه. بلا هذا يُستعلَم عن الكشف مرّةً لكل مرشّح في الصفحة.
+     *
+     * @var array<string, bool>
+     */
+    private array $revealMemo = [];
 
     /**
      * @throws ProfileNotVisibleException إن كان المشاهد صاحب العمل الحالي
@@ -34,13 +41,14 @@ final class ProfileVisibilityService
             return FieldSet::all();
         }
 
-        // 2) صلاحية الإشراف تكشف كل شيء — وتُسجَّل. أخطر صلاحية في المنصّة:
-        //    من يملكها يرى المنتج كلّه بلا دفع (Brain/04 §3).
+        // 2) صلاحية الإشراف تكشف كل شيء (Brain/04 §3).
+        //
+        //    التسجيل في التدقيق **ليس هنا**: هذه الدالة تُستدعى مرّةً لكل
+        //    مرشّح في القائمة، ومرّتين في المعاينة الواحدة (المتحكّم ثم
+        //    الـ Resource). أخطر فعلٍ غير مالي كان يغرق في ضجيجٍ من صنعه.
+        //    المتحكّم هو من يُسجّل، مرّةً واحدة لكل طلب. راجع
+        //    CandidateController::show() و::index().
         if ($viewer?->can(Permissions::PROFILE_MODERATE) === true) {
-            $this->audit->log(AuditLogger::PROFILE_VIEWED_AS_MODERATOR, $profile, [
-                'ref' => $profile->ref,
-            ]);
-
             return FieldSet::all();
         }
 
@@ -56,8 +64,15 @@ final class ProfileVisibilityService
         }
 
         // 5) الافتراضي: محجوب. قائمة الحجب من الإعدادات لا من الكود.
+        //
+        // ⚠️ الافتراضي عند **غياب** المفتاح هو القائمة الكاملة، لا `[]`.
+        //    `[]` تعني «لا تحجب شيئاً»: صفٌّ مفقود أو كاشٌ بائت كان يكفي
+        //    لكشف كل اسمٍ وهاتفٍ وبريد بلا دفع. العطب يُغلق الباب.
+        //
+        //    أمّا `[]` المكتوبة صراحةً من اللوحة (بتأكيدٍ مزدوج) فتُحترَم:
+        //    `settings()` تُميّز المفتاح الغائب من المفتاح الفارغ.
         /** @var list<string> $masked */
-        $masked = (array) settings(SettingKeys::MASKING_FIELDS, []);
+        $masked = (array) settings(SettingKeys::MASKING_FIELDS, SettingKeys::defaultMaskedFields());
 
         return FieldSet::allExcept($masked);
     }
@@ -80,11 +95,65 @@ final class ProfileVisibilityService
             return false;
         }
 
+        $key = $company->id.':'.$profile->id;
+
+        // ★ نقرأ من الذاكرة، ولا نكتب فيها.
+        //
+        //   الكتابة هنا كانت تُسمّم الذاكرة: طلبٌ يسأل «أمكشوف؟» فيُخزَّن
+        //   `false`، ثم يُكمَل الكشف في الطلب نفسه، فيبقى الجواب `false`
+        //   إلى أن تموت النسخة. الحجب يبقى بعد الدفع.
+        //
+        //   `primeReveals()` وحدها تكتب — وتمسح قبل أن تكتب. فالذاكرة لا
+        //   تحيا إلّا داخل القراءة التي هيّأتها.
+        if (array_key_exists($key, $this->revealMemo)) {
+            return $this->revealMemo[$key];
+        }
+
         return CandidateReveal::query()
             ->where('company_profile_id', $company->id)
             ->where('employee_profile_id', $profile->id)
             ->valid()
             ->exists();
+    }
+
+    /**
+     * يجلب كشوف الشركة الصالحة لدفعةٍ من الملفّات في استعلامٍ واحد.
+     *
+     * يُستدعى قبل بناء مجموعة الـ Resource: بلا ذلك يسأل كل مرشّحٍ عن نفسه،
+     * فصفحةٌ من ٥٠ مرشّحاً = ٥٠ استعلاماً.
+     *
+     * @param  iterable<EmployeeProfile>  $profiles
+     */
+    public function primeReveals(?CompanyProfile $company, iterable $profiles): void
+    {
+        // تُمسح قبل أن تُملأ: الذاكرة لا تعيش أطول من القراءة التي هيّأتها.
+        $this->revealMemo = [];
+
+        if ($company === null) {
+            return;
+        }
+
+        $ids = [];
+
+        foreach ($profiles as $profile) {
+            $ids[] = $profile->id;
+        }
+
+        if ($ids === []) {
+            return;
+        }
+
+        $revealed = CandidateReveal::query()
+            ->where('company_profile_id', $company->id)
+            ->whereIn('employee_profile_id', $ids)
+            ->valid()
+            ->pluck('employee_profile_id')
+            ->all();
+
+        foreach ($ids as $id) {
+            // الغياب من النتيجة جوابٌ أيضاً: `false` تُخزَّن كي لا يُعاد السؤال.
+            $this->revealMemo[$company->id.':'.$id] = in_array($id, $revealed, true);
+        }
     }
 
     public function companyOf(?User $viewer): ?CompanyProfile

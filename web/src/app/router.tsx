@@ -8,6 +8,9 @@ import { BrowsePage } from '@/features/candidates/BrowsePage'
 import { CandidateDetailPage } from '@/features/candidates/CandidateDetailPage'
 import { MyRevealsPage } from '@/features/reveals/MyRevealsPage'
 import { MyProfilePage } from '@/features/profile/MyProfilePage'
+import { CompaniesPage } from '@/features/admin/CompaniesPage'
+import { CompanyDetailPage } from '@/features/admin/CompanyDetailPage'
+import { CandidateApprovalsPage } from '@/features/admin/CandidateApprovalsPage'
 import { RoleMatrixPage } from '@/features/admin/RoleMatrixPage'
 import { SettingsPage } from '@/features/admin/SettingsPage'
 import { AuditLogPage } from '@/features/admin/AuditLogPage'
@@ -28,8 +31,17 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // صفحة محاكاة الدفع تُفتح من إعادة توجيه البوّابة — بلا حارس.
-  { path: '/payments/simulate', element: <SimulatePaymentPage /> },
+  // صفحة محاكاة الدفع أداة تطويرٍ فقط — لا تُشحن في حزمة الإنتاج.
+  {
+    path: '/payments/simulate',
+    element: import.meta.env.DEV ? (
+      <SimulatePaymentPage />
+    ) : (
+      <main className="grid min-h-screen place-items-center p-6">
+        <p className="text-sm text-[var(--k-text-muted)]">غير متاح</p>
+      </main>
+    ),
+  },
   { path: '/health', element: <HealthPage /> },
 
   {
@@ -56,6 +68,19 @@ export const router = createBrowserRouter([
           {
             element: <ProtectedRoute permission="profile.update" />,
             children: [{ path: '/profile', element: <MyProfilePage /> }],
+          },
+
+          {
+            element: <ProtectedRoute permission="company.view" />,
+            children: [
+              { path: '/admin/companies', element: <CompaniesPage /> },
+              { path: '/admin/companies/:id', element: <CompanyDetailPage /> },
+            ],
+          },
+
+          {
+            element: <ProtectedRoute permission="profile.approve" />,
+            children: [{ path: '/admin/candidates', element: <CandidateApprovalsPage /> }],
           },
 
           {

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Exceptions\PaymentsUnderDevelopmentException;
 use App\Models\User;
+use App\Services\Masking\ProfileVisibilityService;
 use App\Services\Payments\ManualGateway;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Settings\SettingsRepository;
@@ -21,11 +23,25 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(SettingsRepository::class);
 
+        // `scoped` لا `bind`: الخدمة تحفظ نتائج فحص الكشف داخل الطلب الواحد.
+        // بـ `bind` كانت كل استدعاءة `app(...)` تُنشئ نسخةً جديدة بذاكرةٍ فارغة،
+        // فيتكرّر استعلام الكشف لكل مرشّح في الصفحة (N+1).
+        $this->app->scoped(ProfileVisibilityService::class);
+
         // البوّابة تُختار من الإعدادات لا من الكود: استبدالها بـ QPay أو Dibsy
         // لاحقاً تغييرُ قيمةٍ في اللوحة + إضافةُ سائق، لا إعادةُ كتابة.
+        //
+        // ⚠️ لا `default => new ManualGateway`. كان اختيار «stripe» من اللوحة
+        //    يُسقط النظام صامتاً إلى بوّابة التطوير — أي دفعٌ وهميّ يظنّه
+        //    المشرف حقيقياً. البوّابة غير المنفَّذة تُعلن عن نفسها بـ 503.
         $this->app->bind(PaymentGateway::class, function (): PaymentGateway {
-            return match ((string) settings(SettingKeys::BILLING_GATEWAY, 'manual')) {
-                default => new ManualGateway,
+            $gateway = (string) settings(SettingKeys::BILLING_GATEWAY, 'manual');
+
+            return match ($gateway) {
+                'manual' => new ManualGateway,
+                default => throw new PaymentsUnderDevelopmentException(
+                    "البوّابة «{$gateway}» غير منفَّذة بعد."
+                ),
             };
         });
     }

@@ -19,6 +19,14 @@ final class SettingKeys
 
     public const BILLING_GATEWAY = 'billing.gateway';
 
+    /**
+     * ★ الدفع قيد التطوير — لم تُربَط بوّابةٌ حقيقية بعد.
+     *
+     * عامّ: تقرؤه الواجهة لتُعلن ذلك للمستخدم بدل أن تَعِده بدفعٍ لا يقع.
+     * يُرفَع إلى `false` في اليوم الذي تُربَط فيه بوّابة حقيقية.
+     */
+    public const BILLING_UNDER_DEVELOPMENT = 'billing.under_development';
+
     public const REVEAL_FEE = 'reveal.fee';
 
     // ── masking ★ ──
@@ -75,5 +83,28 @@ final class SettingKeys
     public static function protectedMaskedFields(): array
     {
         return ['name', 'phone', 'email'];
+    }
+
+    /**
+     * ★ الحجب الافتراضي — يُستعمل حين يغيب إعداد `masking.fields`.
+     *
+     * لا يجوز أن يكون الافتراضي `[]`. مصفوفةٌ فارغة تعني «لا تحجب شيئاً»،
+     * فيصير غيابُ صفٍّ في القاعدة — أو كاشٌ بائت — كشفاً كاملاً صامتاً
+     * لكل اسمٍ وهاتفٍ وبريد. العطب يجب أن يُغلق الباب لا يفتحه.
+     *
+     * هذه أيضاً مصدر الحقيقة الذي يبذر به `SettingSeeder`.
+     *
+     * @return list<string>
+     */
+    public static function defaultMaskedFields(): array
+    {
+        return [
+            'name', 'initials', 'avatar', 'phone', 'email',
+            'current_employer', 'attachments', 'links',
+
+            // البند الجزائي ومبلغه: شرطٌ في عقد الموظّف الحالي.
+            // كشفهما قبل الدفع يمنح الشركة ورقة تفاوضٍ مجّاناً.
+            'notice_period_clause', 'penalty_amount',
+        ];
     }
 }

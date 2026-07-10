@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\UserStatus;
 use App\Enums\UserType;
+use App\Support\Permissions;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Gate;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -71,18 +73,28 @@ class User extends Authenticatable
     }
 
     /**
-     * الصلاحيات الفعّالة: الدور + الاستثناءات الفردية، محسوبةً في الخادم.
+     * الصلاحيات الفعّالة: الدور + الاستثناءات الفردية + `Gate::before`.
      *
-     * تُرسَل إلى الواجهة عند /me لتُخفي أو تُظهر عناصر — للعرض فقط.
-     * الحماية الحقيقية في Policies وMiddleware. راجع Brain/04-rbac.md §5.
+     * ★ تُحسب بسؤال الـ Gate نفسها عن كل صلاحية في الكتالوج، لا بقراءة
+     *   `getAllPermissions()`.
+     *
+     *   السبب: المشرف العام **لا تُسنَد إليه أي صلاحية صراحةً** — يمنحه
+     *   `Gate::before` كل شيء. فـ `getAllPermissions()` تُعيد له مصفوفةً
+     *   فارغة، وكانت الواجهة تُخفي عنه اللوحة كلّها.
+     *
+     *   سؤال الـ Gate يحترم كل طبقات القرار دون أن يذكر اسم دورٍ هنا
+     *   (ADR-007). المصدر واحد للحقيقة: من يُجيز الفعل في الخلفية هو من
+     *   يُظهر زرّه في الواجهة.
+     *
+     * ⚠️ للعرض فقط. الحماية الحقيقية في Policies وMiddleware.
      *
      * @return list<string>
      */
     public function effectivePermissions(): array
     {
-        return array_values(array_map(
-            strval(...),
-            $this->getAllPermissions()->pluck('name')->all(),
+        return array_values(array_filter(
+            Permissions::all(),
+            fn (string $permission): bool => Gate::forUser($this)->allows($permission),
         ));
     }
 }

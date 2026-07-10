@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\Setting;
+use App\Services\Settings\SettingsRepository;
 use App\Support\SettingKeys as K;
 use Illuminate\Database\Seeder;
 
@@ -29,6 +30,11 @@ class SettingSeeder extends Seeder
                 ],
             );
         }
+
+        // ★ البذرة تكتب في القاعدة، والقراءة من `Cache::rememberForever`.
+        //   بلا هذا السطر تبقى القيم القديمة (أو الغياب) مخزَّنةً إلى الأبد،
+        //   فتُبذَر `masking.fields` ولا يراها أحد. إبطالٌ صريح بعد كل بذر.
+        app(SettingsRepository::class)->flush();
     }
 
     /**
@@ -67,22 +73,26 @@ class SettingSeeder extends Seeder
                 'value' => 'manual',
                 'type' => 'enum',
                 'group' => 'billing',
+                // البوّابات التجارية غير منفَّذة بعد. اختيار إحداها من اللوحة
+                // يُعطّل الكشف بـ 503 صريح — لا يسقط صامتاً إلى بوّابة التطوير.
                 'options' => ['manual', 'qpay', 'dibsy', 'stripe'],
-                'description' => 'البوّابة المفعّلة. manual = بوّابة تطوير محلّية بلا مال حقيقي.',
+                'description' => 'البوّابة المفعّلة. manual = بوّابة تطوير محلّية بلا مال حقيقي. البقيّة غير منفَّذة بعد.',
+            ],
+            [
+                'key' => K::BILLING_UNDER_DEVELOPMENT,
+                'value' => true,
+                'type' => 'bool',
+                'group' => 'billing',
+                'is_public' => true,
+                'description' => 'الدفع قيد التطوير: لم تُربَط بوّابةٌ حقيقية. تُعلنه الواجهة للمستخدم. اجعله false عند ربط البوّابة.',
             ],
 
             // ── حجب الحقول ★ ──
             [
                 'key' => K::MASKING_FIELDS,
-                'value' => [
-                    'name', 'initials', 'avatar', 'phone', 'email',
-                    'current_employer', 'attachments', 'links',
-
-                    // البند الجزائي ومبلغه: شرطٌ في عقد الموظّف الحالي.
-                    // كشفهما قبل الدفع يمنح الشركة ورقة تفاوضٍ مجّاناً،
-                    // ويكشف تفاصيل عقده مع صاحب عمله. Brain/03 §2.
-                    'notice_period_clause', 'penalty_amount',
-                ],
+                // مصدر الحقيقة واحد: نفس القائمة التي يقع عليها الحجب
+                // حين يغيب هذا الصفّ من القاعدة. لا نسختان تتباعدان.
+                'value' => K::defaultMaskedFields(),
                 'type' => 'array',
                 'group' => 'masking',
                 'description' => 'الحقول الغائبة من استجابة الـ API قبل الكشف. تجسيد مبدأ «لا كود لتغيير قاعدة عمل».',
