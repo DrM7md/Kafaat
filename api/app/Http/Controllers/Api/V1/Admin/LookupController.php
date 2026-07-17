@@ -82,7 +82,7 @@ final class LookupController extends Controller
         $group = (string) $data['group'];
         $label = (string) $data['label_ar'];
 
-        $lookup = Lookup::create([
+        $lookup = Lookup::make([
             'group' => $group,
             'key' => $this->uniqueKey($group, $label),
             'label_ar' => $label,
@@ -91,10 +91,11 @@ final class LookupController extends Controller
             'sort_order' => $data['sort_order'] ?? 0,
             'meta' => $data['meta'] ?? null,
             'is_active' => true,
-
-            // ما ينشئه المشرف معتمَدٌ فوراً — هو مصدر الاعتماد لا طالبه.
-            'status' => Lookup::STATUS_APPROVED,
         ]);
+
+        // ما ينشئه المشرف معتمَدٌ فوراً — هو مصدر الاعتماد لا طالبه. عبر
+        // forceFill لأن status خارج التعبئة الجماعية.
+        $lookup->forceFill(['status' => Lookup::STATUS_APPROVED])->save();
 
         $this->audit->log(AuditLogger::LOOKUP_CREATED, $lookup, [
             'group' => $group,

@@ -32,7 +32,11 @@ use Illuminate\Support\Str;
  * @property string $status
  * @property int|null $suggested_by_user_id
  */
-#[Fillable(['group', 'key', 'parent_id', 'label_ar', 'label_en', 'meta', 'sort_order', 'is_active', 'status', 'suggested_by_user_id'])]
+// ⚠️ `status` و`suggested_by_user_id` خارج التعبئة الجماعية عمداً: الأولى
+//    اعتمادٌ يملكه الخادم (وإلّا اعتمد موظّفٌ قيمتَه بنفسه)، والثانية نسبةٌ
+//    لا يُنسب بها اقتراحٌ إلى غير صاحبه. تُكتبان عبر forceFill حصراً في
+//    suggest() و Admin\LookupController و LookupSeeder.
+#[Fillable(['group', 'key', 'parent_id', 'label_ar', 'label_en', 'meta', 'sort_order', 'is_active'])]
 class Lookup extends Model
 {
     public const EMPLOYMENT_STATUS = 'employment_status';

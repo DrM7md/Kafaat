@@ -357,19 +357,18 @@ class LookupSeeder extends Seeder
     /** @param array{meta?: array<string, string>|null, parent_id?: int|null, is_active?: bool} $extra */
     private function upsert(string $group, string $key, string $ar, string $en, int $sort, array $extra = []): void
     {
-        Lookup::updateOrCreate(
-            ['group' => $group, 'key' => $key],
-            [
+        // status عبر forceFill — خارج التعبئة الجماعية (يملكه الخادم).
+        Lookup::firstOrNew(['group' => $group, 'key' => $key])
+            ->fill([
                 'label_ar' => $ar,
                 'label_en' => $en,
                 'sort_order' => $sort,
                 'meta' => $extra['meta'] ?? null,
                 'parent_id' => $extra['parent_id'] ?? null,
                 'is_active' => $extra['is_active'] ?? true,
-
-                // البذرة مصدرٌ رسمي — لا تُنتج اقتراحات معلَّقة.
-                'status' => Lookup::STATUS_APPROVED,
-            ],
-        );
+            ])
+            // البذرة مصدرٌ رسمي — لا تُنتج اقتراحات معلَّقة.
+            ->forceFill(['status' => Lookup::STATUS_APPROVED])
+            ->save();
     }
 }
