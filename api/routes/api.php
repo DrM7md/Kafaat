@@ -74,7 +74,8 @@ Route::post('/auth/login', [SessionController::class, 'store'])
 Route::post('/payments/webhook/{provider}', PaymentWebhookController::class)
     ->middleware('throttle:60,1')->name('payments.webhook');
 
-Route::middleware('auth:sanctum')->group(function () {
+// account.active يلي auth:sanctum: حسابٌ عُلِّق بعد دخوله لا يُكمل جلسته.
+Route::middleware(['auth:sanctum', 'account.active'])->group(function () {
     Route::post('/auth/logout', [SessionController::class, 'destroy'])->name('auth.logout');
     Route::get('/me', MeController::class)->name('me');
 
