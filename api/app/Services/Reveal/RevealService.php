@@ -65,7 +65,15 @@ final class RevealService
         }
 
         // إعادة إرسال الطلب نفسه (نفس المفتاح) لا تُنشئ سجلّاً ثانياً.
-        $replay = CandidateReveal::query()->where('idempotency_key', $idempotencyKey)->first();
+        //
+        // ★ مقيَّدٌ بالشركة: المفتاح يخصّها. بلا هذا القيد كان مفتاحُ شركةٍ
+        //   أخرى (لو عُرف) يُطابَق فيُعاد سجلُّها ورابطُ استئنافها، ويُسقَط طلبُ
+        //   هذه الشركة صامتاً — تسريبٌ عابرٌ للمستأجرين. القيد الفريد العالميّ
+        //   على العمود يبقى خطَّ دفاعٍ للتزامن عند الإدراج.
+        $replay = CandidateReveal::query()
+            ->where('company_profile_id', $company->id)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
 
         if ($replay !== null) {
             return $replay->status->unmasks()
