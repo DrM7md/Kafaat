@@ -44,4 +44,18 @@ final class AttachmentPolicy
         // شركةٌ بكشفٍ صالح لهذا الملفّ تحديداً.
         return $this->visibility->hasValidReveal($this->visibility->companyOf($user), $owner);
     }
+
+    /**
+     * الحذف حقُّ صاحب الملفّ وحده.
+     *
+     * لا يُمنح للمشرف: `profile.moderate` صلاحيةُ **رؤية**، ومحو سيرةِ موظّفٍ
+     * ذاتيةً فعلٌ لا رجعة فيه لا تقتضيه المراجعة. وشركةٌ دفعت رسم الكشف تملك
+     * حقّ القراءة لا حقّ الإتلاف.
+     */
+    public function delete(User $user, Attachment $attachment): bool
+    {
+        $owner = $attachment->attachable;
+
+        return $owner instanceof EmployeeProfile && $owner->user_id === $user->id;
+    }
 }

@@ -16,9 +16,9 @@ export function HealthPage() {
 
   return (
     <main className="min-h-screen grid place-items-center p-6">
-      <div className="w-full max-w-lg rounded-[20px] border border-[var(--k-border)] bg-surface p-8 shadow-[var(--k-shadow-container)]">
+      <div className="w-full max-w-lg rounded-[24px] bg-surface p-8 shadow-[var(--k-sh-2)]">
         <header className="flex items-baseline gap-3">
-          <span className="font-heading text-3xl font-bold text-primary">كفاءات</span>
+          <span className="font-logo text-3xl font-bold text-primary">كفاءات</span>
           <span className="text-xs tracking-[1px] text-[var(--k-text-muted)]">KAFAAT</span>
         </header>
 

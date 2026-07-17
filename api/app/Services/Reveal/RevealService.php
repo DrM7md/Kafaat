@@ -12,10 +12,12 @@ use App\Models\CandidateReveal;
 use App\Models\CompanyProfile;
 use App\Models\EmployeeProfile;
 use App\Models\Payment;
-use App\Notifications\ProfileRevealedNotification;
 use App\Services\Audit\AuditLogger;
 use App\Services\Masking\ProfileVisibilityService;
+use App\Services\Notifications\Events;
+use App\Services\Notifications\Notifier;
 use App\Services\Payments\PaymentGateway;
+use App\Support\Permissions;
 use App\Support\SettingKeys;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +37,8 @@ final class RevealService
         private readonly ProfileVisibilityService $visibility,
         private readonly PaymentGateway $gateway,
         private readonly AuditLogger $audit,
+        private readonly RevealPricing $pricing,
+        private readonly Notifier $notifier,
     ) {}
 
     /**
@@ -81,7 +85,8 @@ final class RevealService
      */
     private function revealByPayment(CompanyProfile $company, EmployeeProfile $profile, string $key): RevealResult
     {
-        $fee = (int) settings(SettingKeys::REVEAL_FEE, 0);
+        // السعر من مجال الملفّ لا من إعدادٍ واحد للجميع — ثمّ يُجمَّد أدناه.
+        $fee = $this->pricing->forProfile($profile);
         $currency = (string) settings(SettingKeys::BILLING_CURRENCY, 'QAR');
 
         try {
@@ -182,6 +187,13 @@ final class RevealService
                     'reason' => 'دفعةٌ نجحت بعد فشلها، وللزوج (شركة، موظّف) كشفٌ نشط آخر.',
                 ]);
 
+                // ★★ صفٌّ في سجلٍّ لا يقرؤه أحد ليس تنبيهاً. مالُ عميلٍ معلَّق
+                //    ولا كشفَ يقابله — يحتاج إنساناً الآن، لا عند المراجعة.
+                $this->notifier->sendToPermission(
+                    Permissions::PAYMENT_VIEW,
+                    Events::reconciliationRequired($payment->provider_ref),
+                );
+
                 return null;
             }
 
@@ -274,20 +286,33 @@ final class RevealService
                 'percentage' => $percentage,
             ]);
         });
+
+        // خارج المعاملة عمداً: إشعارٌ عن استردادٍ تراجَع (rollback) أسوأ من
+        // لا إشعار. والصمت هنا يعني شركةً تظنّ أنّ لها وصولاً وقد أُعيد حجبه.
+        $this->notifier->send(
+            $reveal->companyProfile->user,
+            Events::revealRefunded($reveal->employeeProfile->ref),
+        );
     }
 
     private function notifyEmployee(CandidateReveal $reveal): void
     {
+        // مفتاحٌ خاصّ بهذا الإشعار: للموظّف أن يُعلَم بمن كشفه أو لا يُعلَم،
+        // وهو قرار خصوصيّة مستقلّ عن تعطيل الإشعارات كلّها.
         if (! (bool) settings(SettingKeys::PRIVACY_NOTIFY_ON_REVEAL, true)) {
             return;
         }
 
-        if (! (bool) settings(SettingKeys::FEATURE_NOTIFICATIONS, true)) {
-            return;
-        }
+        $this->notifier->send(
+            $reveal->employeeProfile->user,
+            Events::profileRevealed($reveal->companyProfile->legal_name),
+        );
 
-        $reveal->employeeProfile->user->notify(
-            new ProfileRevealedNotification($reveal->companyProfile->legal_name)
+        // ★ والشركةُ أيضاً: الكشف غير متزامن (202 ثم webhook). بلا هذا لا
+        //   تعرف متى صار بوسعها رؤية بيانات التواصل، فتظلّ تُحدّث الصفحة.
+        $this->notifier->send(
+            $reveal->companyProfile->user,
+            Events::revealCompleted($reveal->employeeProfile->ref),
         );
     }
 

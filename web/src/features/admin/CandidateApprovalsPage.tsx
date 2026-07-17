@@ -319,10 +319,10 @@ export function CandidateApprovalsPage() {
 function Counter({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div
-      className={`rounded-[16px] border p-4 ${
+      className={`rounded-[20px] p-4 ${
         highlight && value > 0
-          ? 'border-[rgb(180_134_59/0.35)] bg-gold-tint'
-          : 'border-[var(--k-border)] bg-surface'
+          ? 'border border-[rgb(180_134_59/0.35)] bg-gold-tint'
+          : 'bg-surface shadow-[var(--k-sh-2)]'
       }`}
     >
       <p className="text-[11px] text-[var(--k-text-muted)]">{label}</p>

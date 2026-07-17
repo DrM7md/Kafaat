@@ -27,7 +27,57 @@ final class SettingKeys
      */
     public const BILLING_UNDER_DEVELOPMENT = 'billing.under_development';
 
+    /**
+     * رسم الكشف الافتراضي.
+     *
+     * ★ ليس السعر النهائي: المجال قد يحمل سعراً خاصّاً في `lookups.meta.reveal_fee`.
+     * هذا هو ما يُطبَّق حين لا يُسعَّر المجال. راجع RevealPricing.
+     */
     public const REVEAL_FEE = 'reveal.fee';
+
+    // ── الوظائف ──
+    /**
+     * ★ عدد الوظائف **المفتوحة** المجّانية لكل شركة.
+     *
+     * `open` وحدها تُحسَب: إغلاق وظيفةٍ يحرّر خانتها. فيُثاب من ينظّف لوحته،
+     * ولا يمتلئ الموقع بوظائف ميتة تُغرق الباحثين عن عمل.
+     */
+    public const JOB_FREE_SLOTS = 'jobs.free_slots';
+
+    /** ثمن الخانة الواحدة بعد استنفاد الحصّة. */
+    public const JOB_EXTRA_SLOT_FEE = 'jobs.extra_slot_fee';
+
+    public const FEATURE_JOBS = 'features.jobs';
+
+    // ── مؤشّر الطلب ──
+    /**
+     * عتبتا شارة «مطلوب».
+     *
+     * ★ العدد نفسه لا يُرسَل للشركة أبداً — الشارة وحدها. إظهار «كشفته 5
+     * شركات» يُخبر الشركةَ بنشاط منافسيها، ويُظهر من لم يُطلَب بعدُ بـ «0».
+     */
+    public const DEMAND_BADGE_MIN = 'demand.badge_min';
+
+    public const DEMAND_BADGE_HIGH_MIN = 'demand.badge_high_min';
+
+    // ── مؤشّر الانتقال: نضارة الإشارة ──
+    /**
+     * ★ بعد كم يومٍ نسأل الموظّف: «ما زلتَ كما أنت؟»
+     *
+     * ⚠️ العتبات التي تُحوّل النسبة إلى حالة **ليست هنا** — تعيش في
+     *    `lookups.meta.readiness_min`، فتُضاف حالةٌ رابعة بعتبتها ولونها من
+     *    لوحة القوائم بلا سطر كود. راجع ReadinessMapper.
+     */
+    public const READINESS_FRESH_DAYS = 'readiness.fresh_days';
+
+    /**
+     * ★★ متى تُطفأ الشارة لأنّها بارت.
+     *
+     * هذا هو الفرق بين حقلٍ للزينة وإشارةٍ تجارية. الشركة تدفع رسم الكشف على
+     * أساس هذه الشارة؛ فإن كان عمرُها ثمانية أشهر فقد بعناها ذكرى لا خبراً —
+     * وهي أوّل ما يُطالَب به استردادٌ، وآخر ما تُغفَر به ثقة.
+     */
+    public const READINESS_STALE_DAYS = 'readiness.stale_days';
 
     // ── masking ★ ──
     public const MASKING_FIELDS = 'masking.fields';
@@ -46,6 +96,25 @@ final class SettingKeys
     public const REFUND_TRIGGER = 'refund.trigger';
 
     public const REFUND_REBLOCKS_ACCESS = 'refund.reblocks_access';
+
+    // ── الإشراف: بوّابتا السوق ──
+    /**
+     * ★ هل ينتظر ملفّ الكفاءة موافقةَ مشرف قبل أن يظهر للشركات؟
+     *
+     * `false` افتراضاً: الموظّف ينشر فوراً. الاحتكاك هنا يطرد المرشّحين، وهم
+     * الطرف الشحيح في السوق. الآلة كلّها باقية — إشعالُها نقرةٌ في اللوحة إن
+     * امتلأت المنصّة بملفّات وهمية.
+     */
+    public const MODERATION_REQUIRE_CANDIDATE_APPROVAL = 'moderation.require_candidate_approval';
+
+    /**
+     * ★★ هل تنتظر الشركة توثيقَ مشرف قبل أن تتصفّح الكفاءات؟
+     *
+     * `true` افتراضاً — وهو غير قابل للمساومة عملياً: من يتصفّح هو من يرى
+     * ملفّات الناس. شركةٌ وهمية تتصفّح = حصادُ بياناتٍ بلا حسيب. والاحتكاك
+     * هنا في محلّه: الشركة هي الطرف الذي **يدفع**، فيحتمل دقيقةَ انتظار.
+     */
+    public const MODERATION_REQUIRE_COMPANY_VERIFICATION = 'moderation.require_company_verification';
 
     // ── privacy ──
     public const PRIVACY_EMPLOYER_BLIND = 'privacy.employer_blind';

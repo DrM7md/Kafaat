@@ -25,9 +25,30 @@ class RegisterCompanyRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:32'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'legal_name' => ['required', 'string', 'max:160'],
-            'cr_number' => ['nullable', 'string', 'max:40'],
+
+            // ★ إجباري: هو ما يُوثَّق به وجود الشركة. بلا سجلٍّ لا يملك المشرف
+            //   ما يتحقّق منه، فيصير التوثيق ختماً على فراغ.
+            'cr_number' => ['required', 'string', 'max:40'],
             'accept_terms' => ['accepted'],
             'accept_privacy' => ['accepted'],
+        ];
+    }
+
+    /**
+     * رسائل عربية للحقول التي يُخطئ فيها المسجِّل عادةً.
+     *
+     * المشروع بلا ملفّات ترجمة (`app.locale = en`)، والواجهة تعرض `message`
+     * كما يصل — فبلا هذا يرى مستخدمٌ عربيّ «The cr number field is required.»
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'legal_name.required' => 'الاسم القانوني للشركة مطلوب.',
+            'cr_number.required' => 'رقم السجلّ التجاري مطلوب.',
+            'email.unique' => 'هذا البريد مسجَّل بالفعل.',
+            'password.confirmed' => 'كلمتا المرور غير متطابقتين.',
         ];
     }
 }

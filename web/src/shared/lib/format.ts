@@ -10,8 +10,36 @@ export function formatNumber(value: number): string {
   return latinNumbers.format(value)
 }
 
+/**
+ * رموز العملات — احتياطٌ للعرض حين لا تصل `meta` الدولة من الـ API.
+ *
+ * ⚠️ ليست المصدر. المصدر `lookups.country.meta.currency_label` في قاعدة
+ * البيانات — وإلّا استحال فتحُ دولةٍ جديدة بعملتها دون نشر كود.
+ */
+const CURRENCY_FALLBACK: Record<string, string> = {
+  QAR: 'ر.ق',
+  AED: 'د.إ',
+  SAR: 'ر.س',
+  KWD: 'د.ك',
+  BHD: 'د.ب',
+  OMR: 'ر.ع',
+}
+
+export function currencyLabel(currency: string | null | undefined): string {
+  if (currency === null || currency === undefined || currency === '') return ''
+  return CURRENCY_FALLBACK[currency] ?? currency
+}
+
+/** مبلغٌ بفاصلة الآلاف وعملته: `22,000 ر.ق`. */
+export function formatMoney(value: number, currency?: string | null): string {
+  const symbol = currencyLabel(currency)
+  const amount = latinNumbers.format(value)
+
+  return symbol === '' ? amount : `${amount} ${symbol}`
+}
+
 export function formatQar(value: number, withCurrency = true): string {
-  return withCurrency ? `${latinNumbers.format(value)} ر.ق` : latinNumbers.format(value)
+  return withCurrency ? formatMoney(value, 'QAR') : latinNumbers.format(value)
 }
 
 export function formatSalary(range: { min: number | null; max: number | null } | null): string {

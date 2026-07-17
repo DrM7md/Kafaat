@@ -19,6 +19,7 @@ export type Filters = {
   q: string
   field: string
   city: string
+  nationality: string
   status: string
   min_experience: string
 }
@@ -28,14 +29,32 @@ export type Filters = {
  *   React Query يجزّئ المفتاح ببنيته، فأي اختلافٍ يعني أن التسخين المسبق
  *   يملأ مفتاحاً والصفحة تقرأ من آخر — فيعود الانتظار بلا سبب ظاهر.
  */
-export const EMPTY_FILTERS: Filters = { q: '', field: '', city: '', status: '', min_experience: '' }
+export const EMPTY_FILTERS: Filters = {
+  q: '',
+  field: '',
+  city: '',
+  nationality: '',
+  status: '',
+  min_experience: '',
+}
+
+/**
+ * قائمة التصفّح — ومعها **خيارات المِصفاة الحقيقية**.
+ *
+ * ★ `facets.nationality` ليست كتالوج الجنسيات (مئةٌ ونصف)، بل ما يحمله
+ *   المسجَّلون فعلاً. تصل مع القائمة لا بطلبٍ ثانٍ: هي مشتقّةٌ من الصفوف
+ *   نفسها، ومَن يرى القائمةَ يرى خياراتها.
+ */
+export type CandidateList = Paginated<Candidate> & {
+  facets?: { nationality?: Lookup[] }
+}
 
 export function candidateListQuery(filters: Filters) {
   return queryOptions({
     queryKey: ['candidates', 'list', filters],
     queryFn: async () => {
       const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
-      return (await api.get<Paginated<Candidate>>('/candidates', { params })).data
+      return (await api.get<CandidateList>('/candidates', { params })).data
     },
   })
 }

@@ -9,6 +9,7 @@ use App\Models\EmployeeProfile;
 use App\Models\Experience;
 use App\Services\Masking\FieldSet;
 use App\Services\Masking\ProfileVisibilityService;
+use App\Services\Reveal\RevealPricing;
 use App\Support\SettingKeys;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -53,15 +54,43 @@ final class MaskedProfileResource extends JsonResource
             'field' => $this->whenLoaded('field', fn () => LookupResource::make($this->field)),
             'years_experience' => $this->years_experience,
             'city' => $this->whenLoaded('city', fn () => $this->city?->label_ar),
+
+            // الجنسية مكشوفة كالمدينة والمجال: صفةٌ مهنية تُصفّى بها الشركة
+            // بحثَها (تأشيرة، توطين) — لا تُعرّف صاحبَها ولا تدلّ عليه.
+            'nationality' => $this->whenLoaded('nationality', fn () => LookupResource::make($this->nationality)),
+
             'employment_status' => $this->whenLoaded(
                 'employmentStatus',
                 fn () => LookupResource::make($this->employmentStatus),
             ),
+
+            // ★★ نضارة الحالة — لا الرقم الذي اشتُقّت منه.
+            //
+            //   `readiness` (0–100) **لا يخرج من الخادم أبداً**. عرضُ «87/100»
+            //   يوهم الشركةَ بدقّةٍ لا وجود لها، ويُشعر الموظّف بأنّه مُقيَّم
+            //   برقم. شارةٌ لا عدد — كشارة الطلب في `demandTier()` تماماً.
+            //
+            //   أمّا **عمرُ** الشارة فيُعرض صراحةً، لأنّه ما يُميّز الخبر من
+            //   الذكرى: الشركة تدفع رسم الكشف على أساس هذه الشارة، فمن حقّها
+            //   أن تعرف أنّ صاحبها أقرّها أمس لا قبل ثمانية أشهر.
+            'status_age_days' => $this->readinessAgeDays(),
+            'status_stale' => $this->isReadinessStale(),
             'skills' => $this->whenLoaded('skills', fn () => $this->skills->pluck('name')->all()),
             'expected_salary' => $this->salaryRange(),
             'is_featured' => (bool) $this->is_featured,
             'is_revealed' => $fields->isFullyVisible(),
-            'reveal_fee' => (int) settings(SettingKeys::REVEAL_FEE, 0),
+
+            // السعر من مجال الملفّ. الموضع الوحيد الذي يُحسَب فيه هو
+            // `RevealPricing` — الواجهة تعرض ما يخصمه الخادم تماماً.
+            'reveal_fee' => app(RevealPricing::class)->forProfile($this->resource),
+
+            // منذ متى وهو معروضٌ للشركات. من تاريخ الاعتماد لا إنشاء الحساب:
+            // من ظلّ ملفّه مسودّةً ستّة أشهر ليس «قديماً في السوق».
+            'listed_since_days' => $this->listedSinceDays(),
+
+            // ★ شارةٌ لا عدد. إرسال «كشفته 5 شركات» يُخبر الشركةَ بنشاط
+            //   منافسيها، ويصِم من لم يُطلَب بعدُ بـ «0».
+            'demand' => $this->demandTier(),
 
             ...$this->detailedFields($fields),
 
@@ -140,6 +169,56 @@ final class MaskedProfileResource extends JsonResource
         }
 
         return $row;
+    }
+
+    /**
+     * كم يوماً مضى وهو معروضٌ للشركات.
+     *
+     * من `approved_at` لا من `users.created_at`: الحساب قد يُنشأ ويبقى ملفّه
+     * مسودّةً شهوراً، فعرضُ «مسجّل منذ 300 يوماً» يصِمه بالبيات وهو للتوّ
+     * دخل السوق. ونرجع إلى `published_at` للملفّات السابقة لدورة الاعتماد.
+     */
+    private function listedSinceDays(): ?int
+    {
+        $listedAt = $this->approved_at ?? $this->published_at;
+
+        if ($listedAt === null) {
+            return null;
+        }
+
+        // `diffInDays` تُعيد float في Carbon 3. نُقارن بدايةَ اليوم ببدايته
+        // فيصير الفرق أياماً صحيحة، ولا يقفز العدّاد بساعةٍ في منتصف الليل.
+        return (int) $listedAt->startOfDay()->diffInDays(now()->startOfDay());
+    }
+
+    /**
+     * مستوى الطلب — شارةٌ لا رقم.
+     *
+     * ★ `reveals_count` يُحسَب في الاستعلام (`withCount`) لا هنا: بلا ذلك
+     *   استعلامٌ لكل مرشّح في الصفحة. وإن لم يُحمَّل، لا شارة — لا استعلامَ
+     *   خفيّاً يتسلّل.
+     *
+     * ⚠️ العدد نفسه **لا يُرسَل**. هذه الدالّة تُعيد `null` أو نصّاً.
+     */
+    private function demandTier(): ?string
+    {
+        // نفحص وجود السمة لا قيمتَها: `withCount` قد لا يكون طُبِّق (مسارٌ آخر
+        // يبني الـ Resource). حينها لا شارة — ولا استعلامَ خفيّاً يتسلّل.
+        if (! array_key_exists('reveals_count', $this->resource->getAttributes())) {
+            return null;
+        }
+
+        $count = (int) $this->resource->getAttributes()['reveals_count'];
+
+        $high = (int) settings(SettingKeys::DEMAND_BADGE_HIGH_MIN, 7);
+        $min = (int) settings(SettingKeys::DEMAND_BADGE_MIN, 3);
+
+        if ($count >= $high) {
+            return 'high';
+        }
+
+        // دون العتبة: لا شارة. من لم يُطلَب بعدُ لا يُوصَم بـ «0».
+        return $count >= $min ? 'rising' : null;
     }
 
     /**

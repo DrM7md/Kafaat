@@ -138,8 +138,11 @@ it('★ النشر يكتب published_at فعلاً — لا يُسقطه حار
 
     $profile->refresh();
 
+    // `Approved` لا `Pending`: بوّابة الكفاءات مطفأة افتراضاً — الموظّف ينشر
+    // فيظهر فوراً. المُختبَر هنا أنّ `published_at` تُكتب فعلاً، لا حالةُ
+    // الاعتماد. ودورةُ الاعتماد نفسها تُختبَر في AdminPanelTest بمفتاحها مُشعَلاً.
     expect($profile->published_at)->not->toBeNull()
-        ->and($profile->approval_status)->toBe(ApprovalStatus::Pending)
+        ->and($profile->approval_status)->toBe(ApprovalStatus::Approved)
         ->and($profile->submitted_at)->not->toBeNull();
 });
 

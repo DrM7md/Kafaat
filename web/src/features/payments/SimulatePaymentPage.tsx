@@ -36,7 +36,7 @@ export function SimulatePaymentPage() {
 
   return (
     <main className="grid min-h-screen place-items-center p-6">
-      <div className="w-full max-w-lg rounded-[24px] border border-[var(--k-border)] bg-surface p-8 shadow-[var(--k-shadow-hero)]">
+      <div className="w-full max-w-lg rounded-[24px] bg-surface p-8 shadow-[var(--k-sh-3)]">
         <div
           className="mb-5 rounded-xl border p-3 text-center text-xs font-medium"
           style={{ borderColor: 'rgb(180 134 59 / 0.4)', background: 'var(--k-gold-tint)', color: '#96682A' }}
@@ -76,7 +76,7 @@ export function SimulatePaymentPage() {
               <button
                 type="button"
                 onClick={() => void copyCommand()}
-                className="cursor-pointer rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-medium text-white"
+                className="cursor-pointer rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-medium text-white shadow-[var(--k-shadow-primary)] transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0"
               >
                 {copied ? 'نُسخ' : 'نسخ'}
               </button>
@@ -86,7 +86,7 @@ export function SimulatePaymentPage() {
 
         <Link
           to="/candidates"
-          className="mt-6 block rounded-[14px] bg-primary py-3 text-center text-sm font-bold text-white hover:brightness-110"
+          className="mt-6 block rounded-[14px] bg-primary py-3 text-center text-sm font-bold text-white shadow-[var(--k-shadow-primary)] transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0"
         >
           العودة إلى التصفّح
         </Link>

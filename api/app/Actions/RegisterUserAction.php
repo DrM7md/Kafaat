@@ -8,7 +8,11 @@ use App\Enums\ConsentType;
 use App\Enums\ProfileVisibility;
 use App\Enums\UserStatus;
 use App\Enums\UserType;
+use App\Enums\VerificationStatus;
 use App\Models\User;
+use App\Services\Notifications\Events;
+use App\Services\Notifications\Notifier;
+use App\Support\Permissions;
 use App\Support\Roles;
 use App\Support\SettingKeys;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +25,8 @@ use Illuminate\Support\Facades\Request;
  */
 final class RegisterUserAction
 {
+    public function __construct(private readonly Notifier $notifier) {}
+
     /**
      * @param  array{name: string, email: string, phone?: string|null, password: string, title: string}  $data
      */
@@ -53,11 +59,11 @@ final class RegisterUserAction
     }
 
     /**
-     * @param  array{name: string, email: string, phone?: string|null, password: string, legal_name: string, cr_number?: string|null}  $data
+     * @param  array{name: string, email: string, phone?: string|null, password: string, legal_name: string, cr_number: string}  $data
      */
     public function company(array $data): User
     {
-        return DB::transaction(function () use ($data): User {
+        $user = DB::transaction(function () use ($data): User {
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -69,15 +75,32 @@ final class RegisterUserAction
 
             $user->assignRole(Roles::COMPANY);
 
-            $user->companyProfile()->create([
+            $company = $user->companyProfile()->create([
                 'legal_name' => $data['legal_name'],
-                'cr_number' => $data['cr_number'] ?? null,
+                'cr_number' => $data['cr_number'],
             ]);
+
+            // ★ `pending` لا `unverified`: الفرق ليس تجميلاً. «غير موثَّقة»
+            //   حالةُ إهمالٍ لا يعرف أحدٌ إن كان أحدٌ ينظر فيها؛ و«قيد المراجعة»
+            //   وعدٌ بأنّ طلباً قائماً ينتظر قراراً. والفرق يظهر للشركة نفسها
+            //   في شاشة الانتظار، وللمشرف في طابوره.
+            //
+            //   `forceFill` لأن حالة التوثيق يملكها النظام — لا تُدرَج في
+            //   fillable، وإلّا وثّقت الشركةُ نفسها بحقلٍ في نموذج التسجيل.
+            $company->forceFill(['verification_status' => VerificationStatus::Pending])->save();
 
             $this->recordBaseConsents($user);
 
             return $user;
         });
+
+        // خارج المعاملة: إشعارٌ عن تسجيلٍ تراجَع (rollback) أسوأ من لا إشعار.
+        $this->notifier->sendToPermission(
+            Permissions::COMPANY_APPROVE,
+            Events::companyRegistered($data['legal_name']),
+        );
+
+        return $user;
     }
 
     /**

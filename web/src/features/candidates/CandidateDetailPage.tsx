@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { apiErrorMessage, isNotFound } from '@/shared/api/client'
 import { MaskedAvatar } from '@/shared/ui/MaskedAvatar'
-import { StatusBadge, SkillChip } from '@/shared/ui/StatusBadge'
+import { StatusAge, StatusBadge, SkillChip } from '@/shared/ui/StatusBadge'
+import { DemandBadge, ListedSince } from '@/shared/ui/DemandBadge'
 import { RevealButton } from '@/shared/ui/RevealButton'
 import { CandidateDetailSkeleton } from '@/shared/ui/Skeleton'
 import { useReveal } from './useReveal'
@@ -39,7 +40,7 @@ export function CandidateDetailPage() {
   // شبكةٍ عابر في إعادة الجلب الخلفيّ لا يجوز أن يمحوه.
   if (isNotFound(error) || data === undefined) {
     return (
-      <div className="grid place-items-center rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-16 text-center">
+      <div className="grid place-items-center rounded-[24px] border border-dashed border-[var(--k-border-strong)] bg-surface/40 p-16 text-center">
         <p className="font-heading text-lg text-ink">هذا الملفّ غير متاح</p>
         <Link to="/candidates" className="mt-3 text-sm font-medium">
           العودة إلى التصفّح
@@ -51,7 +52,18 @@ export function CandidateDetailPage() {
   const revealed = data.is_revealed
 
   return (
-    <article className="mx-auto max-w-3xl overflow-hidden rounded-[24px] border border-[var(--k-border)] bg-surface shadow-[var(--k-shadow-hero)]">
+    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+      {/* رابطٌ لا زرّ `history.back()`: من فتح الرابط مباشرةً لا تاريخَ له يعود
+          إليه، فيبقى الزرّ بلا أثر. الرابط يعمل في الحالتين. */}
+      <Link
+        to="/candidates"
+        className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-[var(--k-text-secondary)] hover:text-primary"
+      >
+        <span aria-hidden>→</span>
+        العودة إلى التصفّح
+      </Link>
+
+      <article className="overflow-hidden rounded-[28px] bg-surface shadow-[var(--k-sh-3)]">
       <header
         className="relative h-40"
         style={{ background: 'radial-gradient(120% 120% at 70% 0%, #12665C, var(--k-primary-dark))' }}
@@ -79,14 +91,25 @@ export function CandidateDetailPage() {
         <p className="mt-1.5 text-sm font-semibold text-primary">{data.title}</p>
         <p className="mt-1.5 font-mono text-[11px] text-[var(--k-text-muted)]">{formatRef(data.ref)}</p>
 
-        <div className="mt-3 flex justify-center">
-          <StatusBadge status={data.employment_status} />
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <DemandBadge demand={data.demand} />
+          <StatusBadge status={data.employment_status} stale={data.status_stale} />
+        </div>
+
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <ListedSince days={data.listed_since_days} />
+
+          {/* عمر الحالة هنا أيضاً: هذه هي الصفحة التي تُضغط فيها زرّ الكشف
+              المدفوع — فلا يجوز أن تُقرأ الشارةُ فيها كأنّها اليوم وهي أمس. */}
+          <StatusAge days={data.status_age_days} stale={data.status_stale} />
         </div>
 
         <div className="my-5 flex overflow-hidden rounded-[14px] border border-[var(--k-border)] bg-surface-muted">
           <Stat label="سنوات خبرة" value={formatYears(data.years_experience)} />
           <Divider />
           <Stat label="الموقع" value={data.city ?? '—'} />
+          <Divider />
+          <Stat label="الجنسية" value={data.nationality?.label ?? '—'} />
           <Divider />
           <Stat label="الراتب المتوقّع" value={formatSalary(data.expected_salary)} />
         </div>
@@ -122,11 +145,12 @@ export function CandidateDetailPage() {
 
         {revealed && (data.phone !== undefined || data.email !== undefined) && (
           <div
-            className="mb-4 flex flex-col gap-2.5 rounded-[14px] border p-4 text-right"
+            className="mb-4 flex flex-col gap-2.5 rounded-[16px] border p-4 text-right"
             style={{
               background: 'var(--k-gold-tint)',
               borderColor: 'rgb(180 134 59 / 0.35)',
-              animation: 'kf-rise .5s ease both',
+              boxShadow: '0 8px 20px -10px rgb(180 134 59 / 0.4)',
+              animation: 'kf-rise .5s var(--k-ease) both',
             }}
           >
             {data.email !== undefined && (
@@ -164,8 +188,9 @@ export function CandidateDetailPage() {
         <p className="mt-3 text-[11px] text-[var(--k-text-muted)]">
           تُخصم رسوم الكشف مرّة واحدة لكل مرشّح · قابل للاسترداد وفق السياسة
         </p>
-      </div>
-    </article>
+        </div>
+      </article>
+    </div>
   )
 }
 

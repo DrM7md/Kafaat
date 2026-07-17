@@ -42,6 +42,10 @@ final class Roles
                 Permissions::PROFILE_CREATE,
                 Permissions::PROFILE_UPDATE,
                 Permissions::PROFILE_PUBLISH,
+
+                // لوحة الوظائف: يتصفّح ويُبدي إعجابه — بهويّةٍ محجوبة.
+                Permissions::JOB_BROWSE,
+                Permissions::JOB_INTEREST,
             ],
 
             self::COMPANY => [
@@ -49,6 +53,9 @@ final class Roles
                 Permissions::CANDIDATE_BROWSE,
                 Permissions::CANDIDATE_REVEAL,
                 Permissions::CANDIDATE_CONTACT,
+
+                // تنشر متطلّباتها وتديرها — ضمن حصّتها.
+                Permissions::JOB_MANAGE,
             ],
 
             self::CONTENT_MODERATOR => [

@@ -5,6 +5,8 @@
 @theme {
   --color-primary: #0f5049;
   --color-primary-dark: #0a3a34;
+  --color-primary-lite: #2c6f65;
+  --color-primary-abyss: #06231f;
   --color-gold: #b4863b;
   --color-gold-light: #c99b4c;
   --color-gold-tint: #f5eddd;
@@ -15,7 +17,8 @@
   --color-surface-muted: #f8f6f0;
   --color-mint: #e4edeb;
 
-  --font-heading: 'Reem Kufi', system-ui, sans-serif;
+  --font-heading: 'Tajawal', system-ui, sans-serif;
+  --font-logo: 'Reem Kufi', system-ui, sans-serif;
   --font-body: 'IBM Plex Sans Arabic', system-ui, sans-serif;
   --font-numeric: 'Tajawal', system-ui, sans-serif;
 }
@@ -23,7 +26,17 @@
 @layer base {
   body {
     margin: 0;
+    /* ورقٌ دافئ متدرّج بدل اللون المسطّح — دفءٌ وعمقٌ خفيّان تحت المحتوى.
+       ثابتٌ عند التمرير فلا «يهرب» التدرّج مع الصفحة. القماشة القديمة تبقى
+       احتياطاً للمتصفّحات بلا دعم gradient. */
     background: var(--k-canvas);
+    background: radial-gradient(
+      140% 100% at 88% -10%,
+      var(--k-paper-hi) 0%,
+      var(--k-canvas) 46%,
+      var(--k-paper-lo) 100%
+    );
+    background-attachment: fixed;
     color: var(--k-ink);
     font-family: var(--k-font-body);
     direction: rtl;
@@ -55,4 +68,45 @@
 @utility numeric {
   font-family: var(--k-font-numeric);
   font-feature-settings: 'tnum';
+}
+
+/*
+ * شريط مؤشّر الانتقال.
+ *
+ * التعبئة تُرسَم في `style` من قيمة الشريط (تدرّجٌ يُقلب اتجاهه في RTL)، وهنا
+ * يُنزَع مظهرُ المتصفّح الافتراضي ويُرسم المقبض. بلا `appearance: none` يتجاهل
+ * كلُّ متصفّحٍ الخلفيةَ ويرسم شريطَه الرمادي.
+ */
+.k-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+}
+
+.k-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--k-surface);
+  border: 3px solid var(--k-primary);
+  box-shadow: var(--k-shadow-hover);
+  cursor: grab;
+}
+
+.k-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--k-surface);
+  border: 3px solid var(--k-primary);
+  cursor: grab;
+}
+
+.k-range:active::-webkit-slider-thumb {
+  cursor: grabbing;
 }

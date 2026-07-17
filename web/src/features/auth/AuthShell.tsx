@@ -3,17 +3,24 @@ import type { ReactNode } from 'react'
 export function AuthShell({
   title,
   subtitle,
+  wide = false,
   children,
 }: {
   title: string
   subtitle: string
+  /** بطاقتان متجاورتان لا نموذجٌ واحد — تحتاجان ضعف العرض. */
+  wide?: boolean
   children: ReactNode
 }) {
   return (
     <main className="grid min-h-screen place-items-center p-6">
-      <div className="w-full max-w-md rounded-[24px] border border-[var(--k-border)] bg-surface p-8 shadow-[var(--k-shadow-hero)]">
+      <div
+        className={`w-full rounded-[28px] bg-surface p-8 shadow-[var(--k-sh-3)] ${
+          wide ? 'max-w-2xl' : 'max-w-md'
+        }`}
+      >
         <div className="mb-6 flex flex-col items-center gap-1">
-          <span className="font-heading text-3xl font-bold text-primary">كفاءات</span>
+          <span className="font-logo text-3xl font-bold text-primary">كفاءات</span>
           <span className="text-[10px] tracking-[1px] text-[var(--k-text-muted)]">KAFAAT</span>
         </div>
 
@@ -86,7 +93,7 @@ export function SubmitButton({ pending, children }: { pending: boolean; children
     <button
       type="submit"
       disabled={pending}
-      className="mt-2 cursor-pointer rounded-[14px] bg-primary px-4 py-3 text-sm font-bold text-white transition-[filter] hover:brightness-110 disabled:cursor-wait disabled:opacity-70"
+      className="mt-2 cursor-pointer rounded-[14px] bg-primary px-4 py-3 text-sm font-bold text-white shadow-[var(--k-shadow-primary)] transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
     >
       {pending ? 'جارٍ…' : children}
     </button>

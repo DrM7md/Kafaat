@@ -8,10 +8,14 @@
   /* ── اللوحة اللونية ── */
   --k-primary: #0f5049;        /* بترولي — أساسي */
   --k-primary-dark: #0a3a34;   /* بترولي غامق */
+  --k-primary-lite: #2c6f65;   /* بترولي فاتح — أطراف التدرّجات، التوهّج */
+  --k-primary-abyss: #06231f;  /* بترولي سحيق — قعر تدرّج السِّتار */
   --k-gold: #b4863b;           /* ذهبي — فعل الكشف حصراً (انظر التحذير أدناه) */
   --k-gold-light: #c99b4c;     /* طرف تدرّج زرّ الكشف */
   --k-gold-tint: #f5eddd;      /* خلفية بطاقة التواصل المكشوفة */
   --k-canvas: #f1ede4;         /* قماشة — خلفية الصفحة */
+  --k-paper-hi: #f6f2e9;       /* ورق دافئ فاتح — طرف تدرّج الخلفية العلوي */
+  --k-paper-lo: #e9e2d3;       /* ورق دافئ غامق — طرف تدرّج الخلفية السفلي */
   --k-ink: #16211f;            /* حبر — النصّ الأساسي */
   --k-surface: #ffffff;        /* سطح — البطاقات */
   --k-surface-alt: #fbf9f4;    /* سطح بديل — حاوية الشبكة */
@@ -29,8 +33,12 @@
   --k-text-secondary: rgb(22 33 31 / 0.6);
   --k-text-muted: rgb(22 33 31 / 0.45);
 
-  /* ── الخطوط ── */
-  --k-font-heading: 'Reem Kufi', system-ui, sans-serif;
+  /* ── الخطوط ──
+     قيمٌ افتراضية فقط: صفحة «المظهر» تتجاوزها في :root وقت التشغيل
+     (localStorage) — راجع shared/lib/appearance.ts. الشعار خطٌّ مستقلّ عن
+     العناوين ليُختار كلٌّ على حدة. */
+  --k-font-heading: 'Tajawal', system-ui, sans-serif;
+  --k-font-logo: 'Reem Kufi', system-ui, sans-serif;   /* شعار «كفاءات» حصراً */
   --k-font-body: 'IBM Plex Sans Arabic', system-ui, sans-serif;
   --k-font-numeric: 'Tajawal', system-ui, sans-serif; /* الأرقام والإحصاءات حصراً */
 
@@ -49,6 +57,17 @@
   --k-shadow-hover: 0 12px 30px rgb(22 33 31 / 0.1);
   --k-shadow-gold: 0 8px 22px rgb(180 134 59 / 0.4);
   --k-shadow-primary: 0 6px 18px rgb(15 80 73 / 0.28);
+
+  /* ── ظلال طبقية ناعمة (تحديث 2026-07 — عمقٌ بدل الحدّ الصريح) ──
+     كل ظلّ طبقتان: طبقةٌ قريبة تُثبّت الحافة، وطبقةٌ بعيدة تُطفي البطاقة على
+     القماشة. هذا ما يحوّل «الصندوق المحدَّد» إلى «سطحٍ يطفو». */
+  --k-sh-1: 0 1px 2px rgb(18 27 25 / 0.04), 0 2px 6px -2px rgb(18 27 25 / 0.06);
+  --k-sh-2: 0 2px 4px rgb(18 27 25 / 0.04), 0 12px 28px -12px rgb(18 27 25 / 0.16);
+  --k-sh-3: 0 4px 8px rgb(18 27 25 / 0.05), 0 26px 50px -18px rgb(18 27 25 / 0.26);
+  --k-sh-gold-soft: 0 10px 26px -6px rgb(180 134 59 / 0.5);
+
+  /* ── منحنى الحركة الموحّد ── */
+  --k-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 /* ── ألوان الحالة الوظيفية ──
@@ -84,6 +103,25 @@
 @keyframes kf-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* لمعةٌ تمرّ — على السِّتار (إيحاءٌ بإنسانٍ خلف الزجاج) وعلى زرّ الكشف عند التأشير */
+@keyframes kf-sheen {
+  0% { background-position: 200% 0; }
+  60%, 100% { background-position: -140% 0; }
+}
+
+/* نبضةٌ حلقية — نقطة الحالة الحيّة («منفتح على فرص» / «راغب بالانتقال») */
+@keyframes kf-ping {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  70%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* تمريرٌ قُطريّ بطيء لشبكة الخلفية التخطيطية.
+   المسافة 160px = مضاعفٌ مشترك لخليّتي الشبكة (32 صغرى · 160 كبرى) فيعود
+   كلُّ خطٍّ إلى طوره عند نهاية الدورة — انجرافٌ سلسٌ بلا قفزة. */
+@keyframes kf-grid-pan {
+  to { background-position: 160px 160px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

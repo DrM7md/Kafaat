@@ -25,14 +25,19 @@ final class ProfileRevealedNotification extends Notification
         return ['database'];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * نفس شكل `PlatformNotification` — صندوقُ الإشعارات يقرأ شكلاً واحداً.
+     *
+     * @return array<string, mixed>
+     */
     public function toArray(object $notifiable): array
     {
         return [
-            'type' => 'profile.revealed',
+            'key' => 'profile.revealed',
             'title' => 'اطّلعت شركةٌ على ملفّك',
-            'body' => "قامت «{$this->companyName}» بكشف بيانات التواصل معك.",
-            'company_name' => $this->companyName,
+            'body' => "كشفت «{$this->companyName}» بيانات التواصل معك. قد تتلقّى اتصالاً منها قريباً.",
+            'link' => '/profile',
+            'meta' => ['company' => $this->companyName],
         ];
     }
 }

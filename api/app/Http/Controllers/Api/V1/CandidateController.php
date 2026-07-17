@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\RevealStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\LookupResource;
 use App\Http\Resources\MaskedProfileResource;
 use App\Models\EmployeeProfile;
 use App\Models\Lookup;
 use App\Services\Audit\AuditLogger;
 use App\Services\Masking\ProfileVisibilityService;
+use App\Support\EmployerName;
 use App\Support\Permissions;
 use App\Support\SettingKeys;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,6 +33,7 @@ final class CandidateController extends Controller
             'q' => ['nullable', 'string', 'max:80'],
             'field' => ['nullable', 'string', 'max:60'],
             'city' => ['nullable', 'string', 'max:60'],
+            'nationality' => ['nullable', 'string', 'max:60'],
             'status' => ['nullable', 'string', 'max:60'],
             'min_experience' => ['nullable', 'integer', 'min:0', 'max:60'],
             'skills' => ['nullable', 'array'],
@@ -40,7 +44,12 @@ final class CandidateController extends Controller
 
         $query = EmployeeProfile::query()
             ->browsable()
-            ->with(['user', 'field', 'city', 'employmentStatus', 'skills']);
+            ->with(['user', 'field', 'city', 'nationality', 'employmentStatus', 'skills'])
+
+            // عدّ الكشوف المكتملة في الاستعلام لا في الـ Resource: بلا هذا
+            // استعلامٌ لكل مرشّح في الصفحة. المعلَّق والمستردّ لا يُحسبان —
+            // الطلب مالٌ دُفع، لا نيّةٌ تُركت.
+            ->withCount(['reveals as reveals_count' => fn ($q) => $q->where('status', RevealStatus::Completed)]);
 
         // ★ عمى صاحب العمل يُطبَّق في **الاستعلام**، لا في الترشيح بعده.
         //   لو رشّحنا بعد العدّ، لسرّبنا وجود الملفّ عبر فرق عدد النتائج.
@@ -50,9 +59,13 @@ final class CandidateController extends Controller
         $this->applyFilters($query, $request);
 
         // الترتيب بحقولٍ مكشوفة فقط. لا ترتيب باسمٍ ولا براتبٍ محجوب.
+        //
+        // الافتراضي: الأحدث إدراجاً أوّلاً — بنفس التاريخ الذي تعرضه البطاقة
+        // («مسجّل منذ …»). لو رتّبنا بـ `published_at` وعرضنا `approved_at`
+        // لظهر «منذ يومين» تحت «منذ شهر» فبدا الترتيب مكسوراً.
         match ($request->string('sort')->value()) {
             'experience' => $query->orderByDesc('years_experience'),
-            default => $query->orderByDesc('published_at'),
+            default => $query->orderByRaw('COALESCE(approved_at, published_at) DESC'),
         };
 
         $profiles = $query->paginate((int) $request->integer('per_page', 20))->withQueryString();
@@ -65,7 +78,40 @@ final class CandidateController extends Controller
 
         $this->auditModeratorListing($request, $profiles->items());
 
-        return MaskedProfileResource::collection($profiles);
+        return MaskedProfileResource::collection($profiles)
+            ->additional(['facets' => ['nationality' => $this->nationalityFacet($request)]]);
+    }
+
+    /**
+     * الجنسيات **الموجودة فعلاً** بين الكفاءات المعروضة — لا كتالوج القوائم.
+     *
+     * ★ خيارُ فلترةٍ لا نتيجةَ له وعدٌ كاذب: الشركة تختار «نيبالي» فتجد فراغاً،
+     *   فتظنّ العطبَ في المنصّة لا في السوق. الكتالوج مئةٌ ونصف — عرضُها كلَّها
+     *   في مِصفاةٍ يجعل الاختيارَ بحثاً في العدم. القائمة هنا تنمو مع من يسجّل،
+     *   ولا تعرض إلّا ما يُثمر.
+     *
+     * ⚠️ مِصفاةُ المستخدم **لا تُطبَّق** على هذا الاستعلام عمداً: لو طُبِّقت
+     *    لاختفى كلُّ خيارٍ سوى المختار بمجرّد اختياره — فلا يستطيع تبديله.
+     *
+     * أمّا عمى صاحب العمل فيسري: جنسيةٌ لا يقابلها إلّا موظّفو الشركة الطالبة
+     * تُفشي وجودَهم في المنصّة — وهو ما يُخفيه الاستعلام أصلاً.
+     *
+     * @return array<int, mixed>
+     */
+    private function nationalityFacet(Request $request): array
+    {
+        $query = EmployeeProfile::query()->browsable()->whereNotNull('nationality_id');
+
+        $this->applyEmployerBlindness($query, $request);
+
+        $ids = $query->distinct()->pluck('nationality_id');
+
+        $lookups = Lookup::query()
+            ->whereIn('id', $ids)
+            ->orderBy('sort_order')
+            ->get();
+
+        return LookupResource::collection($lookups)->resolve();
     }
 
     public function show(Request $request, EmployeeProfile $profile): MaskedProfileResource
@@ -90,8 +136,14 @@ final class CandidateController extends Controller
         }
 
         $profile->load([
-            'user', 'field', 'city', 'employmentStatus', 'skills',
+            'user', 'field', 'city', 'nationality', 'employmentStatus', 'skills',
             'experiences', 'educations', 'attachments', 'currentEmployer',
+        ]);
+
+        // نفس عدّ القائمة: بلا هذا تختفي شارة الطلب عند فتح المرشّح، فيظنّ
+        // من رآها في الشبكة أنّها زالت.
+        $profile->loadCount([
+            'reveals as reveals_count' => fn ($q) => $q->where('status', RevealStatus::Completed),
         ]);
 
         return MaskedProfileResource::make($profile)->detailed();
@@ -129,10 +181,30 @@ final class CandidateController extends Controller
             return;
         }
 
+        // الطبقة الأولى: الرابط الصريح.
         $query->where(function (Builder $q) use ($company) {
             $q->whereNull('current_employer_company_id')
                 ->orWhere('current_employer_company_id', '!=', $company->id);
         });
+
+        // ★ الطبقة الثانية: الاسم المطبَّع — شبكةُ أمانٍ لا زينة.
+        //
+        //   الربط بالمعرّف يقع في موضعين (حفظُ الملفّ، وتسجيلُ الشركة). لو
+        //   أفلت أحدُهما مرّةً — هجرةٌ قديمة، صفٌّ كُتب من بذرة، عطبٌ في وصلةٍ
+        //   مستقبَلية — لظهر الموظّف لصاحب عمله. الشرطان معاً، والفهرس يجعل
+        //   الثاني بلا كلفة.
+        //
+        // ⚠️ `whereNull` صراحةً: لو كتبناها `whereNotIn` وحدها لأسقطت SQL كلَّ
+        //    صفٍّ مفتاحُه `NULL` (فـ `NULL NOT IN (…)` تساوي `NULL` لا `TRUE`)
+        //    — أي كلّ من لم يذكر جهة عمله. الحجب كان سيبتلع الجميع.
+        $keys = EmployerName::keysOf($company);
+
+        if ($keys !== []) {
+            $query->where(function (Builder $q) use ($keys) {
+                $q->whereNull('current_employer_name_key')
+                    ->orWhereNotIn('current_employer_name_key', $keys);
+            });
+        }
     }
 
     /**
@@ -172,6 +244,10 @@ final class CandidateController extends Controller
 
         if ($city = $request->string('city')->value()) {
             $query->where('city_id', $this->lookupId(Lookup::CITY, $city));
+        }
+
+        if ($nationality = $request->string('nationality')->value()) {
+            $query->where('nationality_id', $this->lookupId(Lookup::NATIONALITY, $nationality));
         }
 
         if ($status = $request->string('status')->value()) {

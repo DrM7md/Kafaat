@@ -90,7 +90,13 @@ export function RegisterPage({ kind }: { kind: Kind }) {
         ) : (
           <>
             <Field label="الاسم القانوني للشركة" value={form.legal_name} onChange={set('legal_name')} required />
-            <Field label="رقم السجلّ التجاري" value={form.cr_number} onChange={set('cr_number')} />
+            <Field
+              label="رقم السجلّ التجاري"
+              value={form.cr_number}
+              onChange={set('cr_number')}
+              required
+              hint="به يتحقّق المشرف من وجود شركتك قبل أن يوثّقها."
+            />
           </>
         )}
 
@@ -120,6 +126,13 @@ export function RegisterPage({ kind }: { kind: Kind }) {
         </div>
 
         <SubmitButton pending={pending}>إنشاء الحساب</SubmitButton>
+
+        <p className="text-center text-xs text-[var(--k-text-secondary)]">
+          {isEmployee ? 'تسجّل نيابةً عن شركة؟' : 'تبحث عن عمل؟'}{' '}
+          <Link to="/register" className="font-medium">
+            غيّر نوع الحساب
+          </Link>
+        </p>
 
         <p className="text-center text-xs text-[var(--k-text-secondary)]">
           لديك حساب؟ <Link to="/login" className="font-medium">سجّل دخولك</Link>

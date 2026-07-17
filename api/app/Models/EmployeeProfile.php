@@ -6,6 +6,8 @@ namespace App\Models;
 
 use App\Enums\ApprovalStatus;
 use App\Enums\ProfileVisibility;
+use App\Support\EmployerName;
+use App\Support\SettingKeys;
 use Database\Factories\EmployeeProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +27,10 @@ use Illuminate\Support\Str;
  * @property string $title
  * @property int $years_experience
  * @property int|null $current_employer_company_id
+ * @property string|null $current_employer_name
+ * @property string|null $current_employer_name_key
+ * @property int|null $readiness
+ * @property Carbon|null $readiness_confirmed_at
  * @property ProfileVisibility $visibility
  * @property ApprovalStatus $approval_status
  * @property Carbon|null $submitted_at
@@ -33,10 +39,11 @@ use Illuminate\Support\Str;
  * @property int $completeness
  */
 #[Fillable([
-    'title', 'field_id', 'years_experience', 'city_id', 'employment_status_id',
+    'title', 'field_id', 'years_experience', 'country_id', 'nationality_id', 'city_id', 'employment_status_id',
     'expected_salary_min', 'expected_salary_max', 'currency', 'summary',
     'notice_period_clause', 'penalty_amount',
     'current_employer_company_id', 'current_employer_name',
+    'readiness',
     'visibility',
 ])]
 class EmployeeProfile extends Model
@@ -54,6 +61,62 @@ class EmployeeProfile extends Model
         static::creating(function (self $profile) {
             $profile->ref ??= self::generateRef();
         });
+
+        // ★ الربط في النموذج لا في المتحكّم: بذرةٌ أو أمرُ صيانةٍ أو مسارٌ
+        //   مستقبَليّ يكتب الاسم — كلّها تمرّ من هنا. قاعدةُ حجبٍ تعتمد على
+        //   أن يتذكّرها كلُّ كاتبٍ للحقل هي قاعدةٌ ستُنسى مرّة.
+        static::saving(function (self $profile) {
+            if ($profile->isDirty(['current_employer_name', 'current_employer_company_id'])) {
+                $profile->linkCurrentEmployer();
+            }
+        });
+    }
+
+    /**
+     * يشتقّ مفتاح المطابقة من الاسم الحرّ، ويربطه بالشركة المسجَّلة إن وُجدت.
+     *
+     * الموظّف يكتب «شركة الخليج للتقنية» ولا يعرف أنّها مسجَّلة عندنا باسم
+     * «الخليج للتقنية ذ.م.م». المفتاح يجمعهما، فيمتلئ `current_employer_company_id`
+     * — وعليه تقوم آلةُ الحجب كلّها (التصفّح، والكشف، ولوحة الوظائف).
+     */
+    public function linkCurrentEmployer(): void
+    {
+        $this->current_employer_name_key = EmployerName::key($this->current_employer_name);
+
+        // ★★ اختار شركته من القائمة صراحةً؟ نأخذ مفتاحَ **اسمها** أيضاً.
+        //
+        //    بلا هذا كان الاختيار الصريح **أقلّ حمايةً** من الكتابة الحرّة —
+        //    عكسَ المقصود تماماً:
+        //
+        //      • من كتب «الخليج للتقنية» نصّاً، حُجب عن كلّ شركةٍ يُطابق اسمُها
+        //        هذا المفتاح — ولو سجّلت مرّتين بصيغتين.
+        //      • ومن اختار «الخليج للتقنية ذ.م.م» من القائمة، بقي مفتاحُ اسمه
+        //        فارغاً، فانكشف لـ «شركة الخليج للتقنية» — وهي هي.
+        //
+        //    والتسجيل المكرَّر واقعٌ لا فرض: شركةٌ يسجّلها فرعان أو مديران
+        //    بصيغتين مختلفتين. فنحجبه عن كلّ من يحمل مفتاحها.
+        //
+        // ⚠️ نعم، قد يحجبه هذا عن شركةٍ **غير** صاحبة عمله تصادف اسمُها اسمَها.
+        //    وذلك ثمنٌ مقبول: أن نحجب ملفّاً عن شركةٍ ليست صاحبةَ عمله خسارةُ
+        //    فرصةٍ تجارية، وأن نكشفه لصاحب عمله قد يُفقده وظيفته.
+        if ($this->current_employer_company_id !== null) {
+            $employer = CompanyProfile::query()->find($this->current_employer_company_id);
+
+            $this->current_employer_name_key = $employer !== null
+                ? (EmployerName::keysOf($employer)[0] ?? null)
+                : null;
+
+            return;
+        }
+
+        if ($this->current_employer_name_key === null) {
+            return;
+        }
+
+        $this->current_employer_company_id = CompanyProfile::query()
+            ->where('legal_name_key', $this->current_employer_name_key)
+            ->orWhere('brand_name_key', $this->current_employer_name_key)
+            ->value('id');
     }
 
     /**
@@ -89,7 +152,45 @@ class EmployeeProfile extends Model
             'approved_at' => 'datetime',
             'is_featured' => 'boolean',
             'published_at' => 'datetime',
+            'readiness_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * كم يوماً مضى على آخر تصديقٍ لمؤشّر الانتقال.
+     *
+     * `null` لمن لم يضبطه قطّ — لا صفر: «لم يُسأل بعد» غيرُ «صدّقه اليوم».
+     */
+    public function readinessAgeDays(): ?int
+    {
+        if ($this->readiness_confirmed_at === null) {
+            return null;
+        }
+
+        // بدايةُ اليوم ببدايته: `diffInDays` تُعيد float في Carbon 3، ولو
+        // قارنّا اللحظةَ باللحظة لقفز العدّاد يوماً في منتصف الليل.
+        return (int) $this->readiness_confirmed_at->startOfDay()->diffInDays(now()->startOfDay());
+    }
+
+    /**
+     * ★ هل بارت الإشارة؟
+     *
+     * حالةٌ عمرُها ثمانية أشهر ليست خبراً — هي ذكرى. والشركة تدفع رسم الكشف
+     * على أساسها. فبعد العتبة تُطفَأ الشارةُ ولا تُعرض كأنّها اليوم.
+     */
+    public function isReadinessStale(): bool
+    {
+        $age = $this->readinessAgeDays();
+
+        return $age !== null && $age >= (int) settings(SettingKeys::READINESS_STALE_DAYS, 90);
+    }
+
+    /** هل حان وقت أن نسأله «ما زلتَ كما أنت؟» — دون أن تكون قد بارت بعد. */
+    public function needsReadinessConfirmation(): bool
+    {
+        $age = $this->readinessAgeDays();
+
+        return $age !== null && $age >= (int) settings(SettingKeys::READINESS_FRESH_DAYS, 45);
     }
 
     /** @return BelongsTo<User, $this> */
@@ -108,6 +209,20 @@ class EmployeeProfile extends Model
     public function city(): BelongsTo
     {
         return $this->belongsTo(Lookup::class, 'city_id');
+    }
+
+    /** الدولة — منها تُقرأ عملة الراتب. لا «QAR» مكتوبة في الكود. */
+    /** @return BelongsTo<Lookup, $this> */
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(Lookup::class, 'country_id');
+    }
+
+    /** الجنسية — من هو، لا أين يعمل. راجع `Lookup::NATIONALITY`. */
+    /** @return BelongsTo<Lookup, $this> */
+    public function nationality(): BelongsTo
+    {
+        return $this->belongsTo(Lookup::class, 'nationality_id');
     }
 
     /** @return BelongsTo<Lookup, $this> */
@@ -150,6 +265,12 @@ class EmployeeProfile extends Model
     public function reveals(): HasMany
     {
         return $this->hasMany(CandidateReveal::class);
+    }
+
+    /** @return HasMany<JobInterest, $this> */
+    public function jobInterests(): HasMany
+    {
+        return $this->hasMany(JobInterest::class);
     }
 
     /**

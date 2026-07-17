@@ -44,7 +44,7 @@ export function ConfirmDialog({
         e.preventDefault()
         onCancel()
       }}
-      className="m-auto w-full max-w-md rounded-[20px] border border-[var(--k-border)] bg-surface p-0 backdrop:bg-[rgb(22_33_31/0.45)] backdrop:backdrop-blur-sm"
+      className="m-auto w-full max-w-md rounded-[24px] bg-surface p-0 shadow-[var(--k-sh-3)] backdrop:bg-[rgb(22_33_31/0.45)] backdrop:backdrop-blur-sm"
     >
       <div className="p-6 text-right" dir="rtl">
         <h2 className="font-heading text-lg text-ink">{title}</h2>

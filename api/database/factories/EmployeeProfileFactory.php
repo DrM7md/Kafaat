@@ -8,6 +8,7 @@ use App\Enums\ApprovalStatus;
 use App\Enums\ProfileVisibility;
 use App\Enums\UserType;
 use App\Models\EmployeeProfile;
+use App\Models\Lookup;
 use App\Models\User;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -40,6 +41,22 @@ class EmployeeProfileFactory extends Factory
             'approval_status' => ApprovalStatus::Approved,
             'approved_at' => now(),
         ];
+    }
+
+    /**
+     * جنسيةٌ من القائمة المرجعية.
+     *
+     * حالةٌ صريحة لا قيمةٌ في `definition()`: المصنع يعمل في اختباراتٍ لا
+     * تبذر القوائم أصلاً، فربطُه بها يُفشلها جميعاً. من يحتاج الجنسية يطلبها.
+     */
+    public function withNationality(?string $key = null): self
+    {
+        return $this->state(fn (): array => [
+            'nationality_id' => Lookup::query()
+                ->where('group', Lookup::NATIONALITY)
+                ->when($key !== null, fn ($q) => $q->where('key', $key))
+                ->value('id'),
+        ]);
     }
 
     public function unpublished(): self

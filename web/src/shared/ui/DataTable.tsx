@@ -90,7 +90,7 @@ export function DataTable<T extends { id: number }>({
   const selectable = bulkAction !== undefined
 
   return (
-    <div className="overflow-hidden rounded-[20px] border border-[var(--k-border)] bg-surface">
+    <div className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--k-sh-2)]">
       {selectable && selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 border-b border-[var(--k-divider)] bg-mint px-4 py-2.5">
           <span className="numeric text-[13px] font-medium text-primary-dark">

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, apiErrorMessage } from '@/shared/api/client'
+import { BackToSettings } from './BackToSettings'
 
 type Setting = {
   key: string
@@ -24,7 +25,14 @@ const GROUP_LABELS: Record<string, string> = {
 /** المجموعات التي يُفسد تعديلُها المنتجَ إن أُسيء. */
 const DANGEROUS = new Set(['masking', 'billing'])
 
-export function SettingsPage() {
+/**
+ * إعدادات النظام — قواعد العمل نفسها.
+ *
+ * ليست «الإعدادات» بإطلاق: تلك صارت لوحةً (`SettingsHubPage`) تجمع هذه
+ * الصفحةَ والقوائمَ والأسعارَ والتدقيق. ما هنا هو ما يُغيّر **سلوك المنتج**
+ * — نموذج الربح، الحجب، الاسترداد — لا ما يُدار من بياناتٍ مرجعية.
+ */
+export function SystemSettingsPage() {
   const queryClient = useQueryClient()
   const [activeGroup, setActiveGroup] = useState('billing')
 
@@ -45,7 +53,7 @@ export function SettingsPage() {
 
   if (isError) {
     return (
-      <div className="grid place-items-center rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
+      <div className="grid place-items-center rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
         <p className="font-heading text-lg text-ink">تعذّر تحميل الإعدادات</p>
         <p className="mt-1 text-sm text-[var(--k-text-secondary)]">تأكّد من الاتصال ثم أعد المحاولة.</p>
       </div>
@@ -62,7 +70,8 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="font-heading text-2xl text-ink">الإعدادات</h1>
+        <BackToSettings />
+        <h1 className="font-heading text-2xl text-ink">إعدادات النظام</h1>
         <p className="mt-1 text-sm text-[var(--k-text-secondary)]">
           كل قاعدة عملٍ مؤثّرة تعيش هنا. تغييرها لا يحتاج نشر كود، وكل تعديل يُسجَّل بقيمته قبل وبعد.
         </p>
@@ -125,7 +134,7 @@ function SettingRow({
   const dirty = JSON.stringify(value) !== JSON.stringify(setting.value)
 
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-[16px] border border-[var(--k-border)] bg-surface p-4">
+    <div className="flex flex-wrap items-center gap-4 rounded-[20px] bg-surface p-4 shadow-[var(--k-sh-2)]">
       <div className="min-w-[240px] flex-1">
         <code dir="ltr" className="text-[12px] font-semibold text-ink">
           {setting.key}
@@ -150,7 +159,7 @@ function SettingRow({
             confirmed: setting.key === 'masking.fields',
           })
         }
-        className="cursor-pointer rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-30"
+        className="cursor-pointer rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white shadow-[var(--k-shadow-primary)] transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-30"
       >
         حفظ
       </button>

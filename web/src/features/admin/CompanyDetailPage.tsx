@@ -47,7 +47,7 @@ export function CompanyDetailPage() {
 
   if (isError || data === undefined) {
     return (
-      <div className="grid place-items-center rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-16 text-center">
+      <div className="grid place-items-center rounded-[24px] border border-dashed border-[var(--k-border-strong)] p-16 text-center">
         <p className="font-heading text-lg text-ink">هذه الشركة غير متاحة</p>
         <Link to="/admin/companies" className="mt-3 text-sm font-medium">
           العودة إلى القائمة
@@ -64,7 +64,7 @@ export function CompanyDetailPage() {
         <Link to="/admin/companies">الشركات</Link> · <span className="text-ink">{company.legal_name}</span>
       </nav>
 
-      <header className="rounded-[20px] border border-[var(--k-border)] bg-surface p-6">
+      <header className="rounded-[24px] bg-surface p-6 shadow-[var(--k-sh-2)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
@@ -92,7 +92,7 @@ export function CompanyDetailPage() {
                   type="button"
                   disabled={verify.isPending}
                   onClick={() => verify.mutate('verified')}
-                  className="cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50"
+                  className="cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--k-shadow-primary)] transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 disabled:opacity-50"
                 >
                   توثيق الشركة
                 </button>
@@ -102,7 +102,7 @@ export function CompanyDetailPage() {
                   type="button"
                   disabled={verify.isPending}
                   onClick={() => verify.mutate('rejected')}
-                  className="cursor-pointer rounded-xl border border-[var(--k-border-strong)] px-4 py-2.5 text-sm font-medium hover:bg-surface-muted disabled:opacity-50"
+                  className="cursor-pointer rounded-xl border border-[var(--k-border-strong)] px-4 py-2.5 text-sm font-medium transition hover:-translate-y-0.5 hover:bg-surface-muted disabled:opacity-50"
                 >
                   رفض
                 </button>
@@ -122,11 +122,11 @@ export function CompanyDetailPage() {
         <h2 className="mb-3 font-heading text-lg text-ink">طلبات الكشف</h2>
 
         {reveals.length === 0 ? (
-          <p className="rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-10 text-center text-sm text-[var(--k-text-muted)]">
+          <p className="rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-10 text-center text-sm text-[var(--k-text-muted)]">
             لم تطلب هذه الشركة أي كشف بعد.
           </p>
         ) : (
-          <div className="overflow-hidden rounded-[20px] border border-[var(--k-border)] bg-surface">
+          <div className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--k-sh-2)]">
             <table className="w-full text-right text-[13px]">
               <thead className="bg-surface-muted text-[11px] text-[var(--k-text-muted)]">
                 <tr>
@@ -186,7 +186,7 @@ function Row({ label, value, ltr = false }: { label: string; value: string; ltr?
 
 function Stat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="rounded-[16px] border border-[var(--k-border)] bg-surface p-4">
+    <div className="rounded-[20px] bg-surface p-4 shadow-[var(--k-sh-2)]">
       <p className="text-[11px] text-[var(--k-text-muted)]">{label}</p>
       <p className={`numeric mt-1 text-xl font-bold ${accent ? 'text-primary' : 'text-ink'}`}>{value}</p>
     </div>

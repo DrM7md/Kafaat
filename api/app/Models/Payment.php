@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PaymentPurpose;
 use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -18,11 +19,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * يكتبها النظام لا مدخلات المستخدم. تُضبط بـ forceFill في RevealService.
  *
  * @property PaymentStatus $status
+ * @property PaymentPurpose $purpose
  * @property int $amount
+ * @property int $company_profile_id
  * @property string $provider_ref
  */
 #[Fillable([
-    'company_profile_id', 'provider', 'provider_ref', 'idempotency_key',
+    'company_profile_id', 'purpose', 'provider', 'provider_ref', 'idempotency_key',
     'amount', 'currency', 'fee', 'status', 'payload',
 ])]
 class Payment extends Model
@@ -34,6 +37,12 @@ class Payment extends Model
     {
         return [
             'status' => PaymentStatus::class,
+
+            // ★ ما تشتريه هذه الدفعة. الـ webhook يقرؤه ليعرف ماذا يُتمّ —
+            //   بلا ذلك كان يبحث عن كشفٍ لكل دفعة، فتنهار دفعةُ الوظيفة
+            //   **بعد** أن يدخل المال.
+            'purpose' => PaymentPurpose::class,
+
             'payload' => 'array',
             'paid_at' => 'datetime',
             'refunded_at' => 'datetime',
@@ -45,6 +54,13 @@ class Payment extends Model
     public function companyProfile(): BelongsTo
     {
         return $this->belongsTo(CompanyProfile::class);
+    }
+
+    /** الوظيفة التي استهلكت هذه الخانة المدفوعة — إن استُهلكت. */
+    /** @return HasOne<JobPosting, $this> */
+    public function jobPosting(): HasOne
+    {
+        return $this->hasOne(JobPosting::class);
     }
 
     /** @return HasOne<CandidateReveal, $this> */

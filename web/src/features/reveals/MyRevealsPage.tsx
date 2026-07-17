@@ -36,20 +36,20 @@ export function MyRevealsPage() {
       {isPending && <p className="text-sm text-[var(--k-text-muted)]">جارٍ التحميل…</p>}
 
       {isError && (
-        <div className="grid place-items-center rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
+        <div className="grid place-items-center rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
           <p className="font-heading text-lg text-ink">تعذّر تحميل كشوفاتك</p>
           <p className="mt-1 text-sm text-[var(--k-text-secondary)]">تأكّد من الاتصال ثم أعد المحاولة.</p>
         </div>
       )}
 
       {data !== undefined && data.length === 0 && (
-        <p className="rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center text-sm text-[var(--k-text-muted)]">
+        <p className="rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-12 text-center text-sm text-[var(--k-text-muted)]">
           لم تكشف أي مرشّح بعد.
         </p>
       )}
 
       {data !== undefined && data.length > 0 && (
-        <div className="overflow-hidden rounded-[20px] border border-[var(--k-border)] bg-surface">
+        <div className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--k-sh-2)]">
           {data.map((reveal) => {
             const status = STATUS[reveal.status]
 

@@ -53,12 +53,8 @@ export function LoginPage() {
 
         <p className="text-center text-xs text-[var(--k-text-secondary)]">
           لا تملك حساباً؟{' '}
-          <Link to="/register/employee" className="font-medium">
-            سجّل كباحث عن عمل
-          </Link>{' '}
-          أو{' '}
-          <Link to="/register/company" className="font-medium">
-            كشركة
+          <Link to="/register" className="font-medium">
+            أنشئ حسابك
           </Link>
         </p>
       </form>

@@ -25,7 +25,7 @@ export function Shimmer({ className = '' }: { className?: string }) {
 /** هيكل صفحة تفاصيل المرشّح — بمقاسات البطاقة الحقيقية. */
 export function CandidateDetailSkeleton() {
   return (
-    <article className="mx-auto max-w-3xl overflow-hidden rounded-[24px] border border-[var(--k-border)] bg-surface">
+    <article className="mx-auto max-w-3xl overflow-hidden rounded-[24px] bg-surface shadow-[var(--k-sh-2)]">
       <Shimmer className="h-40 rounded-none" />
 
       <div className="flex flex-col items-center px-7 pb-7 pt-14">

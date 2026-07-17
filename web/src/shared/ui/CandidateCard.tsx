@@ -1,9 +1,11 @@
 import { Link } from 'react-router'
 import type { Candidate } from '@/shared/api/types'
 import { MaskedAvatar } from './MaskedAvatar'
-import { SkillChip, StatusBadge } from './StatusBadge'
+import { SkillChip, StatusAge, StatusBadge } from './StatusBadge'
+import { DemandBadge, ListedSince } from './DemandBadge'
 import { RevealButton } from './RevealButton'
-import { formatRef, formatSalary, formatYears } from '@/shared/lib/format'
+import { TiltCard } from './TiltCard'
+import { formatSalary, formatYears } from '@/shared/lib/format'
 
 /**
  * بطاقة الكفاءة — معالجة `1a` المعتمدة (ADR-008).
@@ -26,27 +28,43 @@ export function CandidateCard({
 }) {
   const revealed = candidate.is_revealed
   const prefetch = () => onPrefetch?.(candidate.ref)
+  const hot = candidate.demand === 'high'
 
   return (
-    <article
+    <TiltCard
       onMouseEnter={prefetch}
       onFocusCapture={prefetch}
       onTouchStart={prefetch}
-      className="flex flex-col gap-3.5 rounded-[16px] border border-[var(--k-border)] bg-surface p-[18px] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[var(--k-shadow-hover)]"
+      className="group relative flex flex-col gap-3.5 overflow-hidden rounded-[24px] bg-surface p-5 shadow-[var(--k-sh-2)] transition-shadow duration-300 hover:shadow-[var(--k-sh-3)]"
     >
-      <header className="flex items-center justify-between gap-2">
-        <span className="rounded-md bg-mint px-2.5 py-1 font-mono text-[11px] font-semibold text-primary">
-          {formatRef(candidate.ref)}
-        </span>
+      {/* هالة الطلب المرتفع — توهّجٌ بتروليّ خافت في أعلى البطاقة، لا ذهبيّ
+          (الذهبيّ محجوز لفعل الكشف). يظهر فقط لمن الطلبُ عليه «مرتفع». */}
+      {hot && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-32"
+          style={{
+            background: 'radial-gradient(80% 100% at 50% 0%, rgb(44 111 101 / 0.16) 0%, transparent 70%)',
+          }}
+        />
+      )}
 
+      <header className="relative flex items-start justify-end gap-2">
         <div className="flex items-center gap-2">
+          <DemandBadge demand={candidate.demand} />
           {candidate.is_featured && <FeaturedBadge />}
-          <StatusBadge status={candidate.employment_status} />
+
+          {/* الشارة وتحتها عمرُها. لا رقم: الخادم لا يرسل النسبة (0–100) أبداً
+              — «87/100» يوهم بدقّةٍ لا وجود لها، ويصِم صاحبه برقم. */}
+          <span className="flex flex-col items-center gap-0.5">
+            <StatusBadge status={candidate.employment_status} stale={candidate.status_stale} />
+            <StatusAge days={candidate.status_age_days} stale={candidate.status_stale} />
+          </span>
         </div>
       </header>
 
-      <div className="flex items-center gap-3">
-        <MaskedAvatar initials={candidate.initials} />
+      <div className="relative flex items-center gap-3.5">
+        <MaskedAvatar initials={candidate.initials} size={58} />
 
         <div className="min-w-0">
           {/* الاسم يظهر فقط حين يصل فعلاً من الخادم. */}
@@ -70,7 +88,7 @@ export function CandidateCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3.5 text-xs text-[var(--k-text-secondary)]">
+      <div className="relative flex flex-wrap gap-x-3.5 gap-y-2 text-xs text-[var(--k-text-secondary)]">
         <span className="inline-flex items-center gap-1.5">
           <BriefcaseIcon />
           {formatYears(candidate.years_experience)}
@@ -81,22 +99,44 @@ export function CandidateCard({
             {candidate.city}
           </span>
         )}
+
+        {/* الجنسية — صفةٌ مهنية تُصفّى بها الشركة بحثها (تأشيرة، توطين).
+            `!= null` لا `!== undefined`: العلاقة محمَّلة دائماً، فيصل المفتاح
+            بقيمة `null` لمن لا جنسيةَ في ملفّه — وفحصُ `undefined` وحده كان
+            يُمرّره ثم ينهار على `.label`، فيُسقط صفحة التصفّح كلّها. */}
+        {candidate.nationality != null && (
+          <span className="inline-flex items-center gap-1.5">
+            <GlobeIcon />
+            {candidate.nationality.label}
+          </span>
+        )}
+
+        <ListedSince days={candidate.listed_since_days} />
       </div>
 
       {candidate.skills !== undefined && candidate.skills.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="relative flex flex-wrap gap-1.5">
           {candidate.skills.map((skill) => (
             <SkillChip key={skill}>{skill}</SkillChip>
           ))}
         </div>
       )}
 
-      <div className="h-px bg-[var(--k-divider)]" />
+      {/* فاصلٌ يخفت عند طرفيه بدل الخطّ الحادّ الممتدّ — يفصل دون أن يقطع. */}
+      <div
+        className="relative h-px"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent, var(--k-divider) 15%, var(--k-divider) 85%, transparent)',
+        }}
+      />
 
-      <footer className="flex items-center justify-between gap-2.5">
+      <footer className="relative flex items-center justify-between gap-2.5">
         <div className="flex flex-col">
-          <span className="text-[10px] text-[var(--k-text-muted)]">الراتب المتوقّع</span>
-          <span className="numeric text-[13px] font-semibold text-ink">
+          <span className="text-[10px] font-medium tracking-wide text-[var(--k-text-muted)]">
+            الراتب المتوقّع
+          </span>
+          <span className="numeric text-[14px] font-bold text-ink">
             {formatSalary(candidate.expected_salary)}
           </span>
         </div>
@@ -114,18 +154,19 @@ export function CandidateCard({
       {revealed && (candidate.phone !== undefined || candidate.email !== undefined) && (
         <ContactCard phone={candidate.phone} email={candidate.email} />
       )}
-    </article>
+    </TiltCard>
   )
 }
 
 function ContactCard({ phone, email }: { phone?: string; email?: string }) {
   return (
     <div
-      className="flex flex-col gap-2 rounded-[14px] border p-3.5"
+      className="relative flex flex-col gap-2 rounded-[16px] border p-3.5"
       style={{
         background: 'var(--k-gold-tint)',
         borderColor: 'rgb(180 134 59 / 0.35)',
-        animation: 'kf-rise .5s ease both',
+        boxShadow: '0 8px 20px -10px rgb(180 134 59 / 0.4)',
+        animation: 'kf-rise .5s var(--k-ease) both',
       }}
     >
       {email !== undefined && (
@@ -178,6 +219,15 @@ function PinIcon() {
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z" />
       <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  )
+}
+
+function GlobeIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z" />
     </svg>
   )
 }

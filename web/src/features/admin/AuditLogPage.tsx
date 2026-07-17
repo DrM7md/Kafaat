@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
+import { BackToSettings } from './BackToSettings'
 
 type AuditLog = {
   id: number
@@ -41,6 +42,7 @@ export function AuditLogPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
+        <BackToSettings />
         <h1 className="font-heading text-2xl text-ink">سجلّ التدقيق</h1>
         <p className="mt-1 text-sm text-[var(--k-text-secondary)]">
           سجلّ إلحاقيّ: لا يُعدَّل ولا يُحذَف. كل كشفٍ ودفعٍ وتعديل إعدادٍ وممارسةِ صلاحيةٍ حرجة له أثرٌ هنا.
@@ -50,20 +52,20 @@ export function AuditLogPage() {
       {isPending && <p className="text-sm text-[var(--k-text-muted)]">جارٍ التحميل…</p>}
 
       {isError && (
-        <div className="grid place-items-center rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
+        <div className="grid place-items-center rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-12 text-center">
           <p className="font-heading text-lg text-ink">تعذّر تحميل السجلّ</p>
           <p className="mt-1 text-sm text-[var(--k-text-secondary)]">تأكّد من الاتصال ثم أعد المحاولة.</p>
         </div>
       )}
 
       {data !== undefined && data.length === 0 && (
-        <p className="rounded-[16px] border border-dashed border-[var(--k-border-strong)] p-12 text-center text-sm text-[var(--k-text-muted)]">
+        <p className="rounded-[20px] border border-dashed border-[var(--k-border-strong)] p-12 text-center text-sm text-[var(--k-text-muted)]">
           لا أحداث بعد.
         </p>
       )}
 
       {data !== undefined && data.length > 0 && (
-        <div className="overflow-x-auto rounded-[20px] border border-[var(--k-border)] bg-surface">
+        <div className="overflow-x-auto rounded-[24px] bg-surface shadow-[var(--k-sh-2)]">
           <table className="w-full text-right text-[13px]">
             <thead className="bg-surface-muted text-[11px] text-[var(--k-text-muted)]">
               <tr>

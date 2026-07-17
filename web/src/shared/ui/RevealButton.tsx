@@ -36,7 +36,7 @@ export function RevealButton({
       type="button"
       onClick={onReveal}
       disabled={pending}
-      className="inline-flex cursor-pointer items-center gap-2 rounded-[11px] px-4 py-2.5 text-[12.5px] font-semibold transition-[filter] hover:brightness-105 disabled:cursor-wait disabled:opacity-70"
+      className="group relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-[12px] px-4 py-2.5 text-[12.5px] font-semibold transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-[1.04] active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
       style={
         revealed
           ? { background: 'var(--k-mint)', color: 'var(--k-primary-dark)' }
@@ -47,8 +47,16 @@ export function RevealButton({
             }
       }
     >
-      <span className="inline-flex">{revealed ? <CheckIcon /> : <LockIcon />}</span>
-      {pending ? 'جارٍ…' : label}
+      {/* لمعةٌ تمرّ عرضَ الزرّ عند التأشير — قبل الكشف وحده (الذهبيّ يلمع، ثمّ
+          يهجر الزرَّ إلى النعناعي بعد الكشف فلا لمعةَ للمكتمل). */}
+      {!revealed && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -translate-x-[130%] bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[130%]"
+        />
+      )}
+      <span className="relative inline-flex">{revealed ? <CheckIcon /> : <LockIcon />}</span>
+      <span className="relative">{pending ? 'جارٍ…' : label}</span>
     </button>
   )
 }

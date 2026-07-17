@@ -17,19 +17,31 @@ export function MaskedAvatar({
 
   return (
     <div
-      className="relative flex-none overflow-hidden rounded-[14px]"
+      className="relative flex-none overflow-hidden rounded-[16px]"
       style={{
         width: size,
         height: size,
-        background: 'linear-gradient(135deg, var(--k-primary), var(--k-primary-dark))',
+        background: 'linear-gradient(140deg, var(--k-primary-lite), var(--k-primary-abyss))',
+        boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.12)',
       }}
     >
       {locked ? (
         <div
           className="absolute inset-0 grid place-items-center"
-          style={{ background: 'rgb(10 58 52 / 0.35)', backdropFilter: 'blur(2px)' }}
+          style={{ background: 'rgb(6 35 31 / 0.42)', backdropFilter: 'blur(2px)' }}
           aria-label="هوية محجوبة"
         >
+          {/* السِّتار — لمعةٌ تمرّ على الزجاج المحبَّب: إيحاءٌ بإنسانٍ خلفه */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.22) 50%, transparent 70%)',
+              backgroundSize: '250% 100%',
+              animation: 'kf-sheen 3.4s var(--k-ease) infinite',
+            }}
+          />
           <LockIcon size={Math.round(size / 3)} color="#fff" />
         </div>
       ) : (

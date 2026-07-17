@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\PaymentPurpose;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Services\Jobs\JobSlotService;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Reveal\RevealService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * ⚠️ مسارٌ بلا مصادقة — وبتحقّق توقيعٍ إلزامي.
@@ -22,6 +26,7 @@ final class PaymentWebhookController extends Controller
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly RevealService $reveals,
+        private readonly JobSlotService $slots,
     ) {}
 
     public function __invoke(Request $request, string $provider): JsonResponse
@@ -56,21 +61,57 @@ final class PaymentWebhookController extends Controller
         if (! $event->succeeded()) {
             // ★ الدفعة **والكشف** معاً: كشفٌ عالق على `pending` يحجز الخانة
             //   في الفهرس الفريد، فيمنع الشركة من إعادة المحاولة إلى الأبد.
-            $this->reveals->failFromPayment($payment);
+            //
+            //   دفعةُ خانةٍ فاشلة لا تحجز شيئاً — الخانة رصيدٌ لا كائن.
+            if ($payment->purpose === PaymentPurpose::Reveal) {
+                $this->reveals->failFromPayment($payment);
+            } else {
+                $payment->forceFill(['status' => PaymentStatus::Failed])->save();
+            }
 
             return response()->json(['message' => 'سُجّل فشل الدفع.']);
         }
 
-        // مبلغ مختلف عن المتوقّع ⇒ لا نكشف. عبثٌ أو خطأ في البوّابة.
+        // مبلغ مختلف عن المتوقّع ⇒ لا نُتمّ شيئاً. عبثٌ أو خطأ في البوّابة.
         // 200 لا 422: إعادة المحاولة لن تُغيّر المبلغ، فلا نُغرق البوّابة
         // بحلقة إعادةٍ أبدية. الحدث مُسجَّل في `payload` للمراجعة.
         if ($event->amount !== $payment->amount) {
             return response()->json(['message' => 'المبلغ لا يطابق الدفعة — تُجوهل.']);
         }
 
-        // معاملة واحدة: paid + completed + تدقيق. آمنة لإعادة التشغيل.
-        $this->reveals->completeFromPayment($payment);
+        // ★★ التفريق بالغرض. قبل هذا كان الـ webhook يبحث عن كشفٍ لكل دفعة،
+        //    فدفعةُ خانةِ وظيفةٍ كانت تنهار — **بعد** أن يدخل المال.
+        match ($payment->purpose) {
+            PaymentPurpose::Reveal => $this->reveals->completeFromPayment($payment),
+            PaymentPurpose::JobSlot => $this->completeJobSlot($payment),
+        };
 
         return response()->json(['message' => 'تمّت المعالجة.']);
+    }
+
+    /**
+     * استقرّ مالُ خانةٍ إضافية.
+     *
+     * لا نفتح وظيفةً هنا: الخانة **رصيد** لا كائن. الشركة تستهلكه حين تفتح
+     * وظيفتها التالية (`JobSlotService::open`) — فإن أغلقت التبويب بعد الدفع
+     * بقي رصيدُها محفوظاً ولم يضع.
+     *
+     * `isSettled()` يحرس إعادة تشغيل الـ webhook: البوّابات تُعيد إرسال
+     * الأحداث، وبلا هذا يُكتب أثرُ تدقيقٍ ثانٍ لمالٍ دخل مرّةً واحدة.
+     */
+    private function completeJobSlot(Payment $payment): void
+    {
+        DB::transaction(function () use ($payment): void {
+            /** @var Payment|null $locked */
+            $locked = Payment::query()->lockForUpdate()->find($payment->id);
+
+            if ($locked === null || $locked->status->isSettled()) {
+                return;
+            }
+
+            $locked->forceFill(['status' => PaymentStatus::Paid, 'paid_at' => now()])->save();
+
+            $this->slots->markPaid($locked);
+        });
     }
 }

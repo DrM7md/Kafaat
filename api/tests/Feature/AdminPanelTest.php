@@ -12,6 +12,7 @@ use App\Models\Skill;
 use App\Models\User;
 use App\Services\Settings\SettingsRepository;
 use App\Support\Roles;
+use App\Support\SettingKeys;
 use Database\Seeders\LookupSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\SettingSeeder;
@@ -20,6 +21,13 @@ beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     $this->seed(SettingSeeder::class);
     app(SettingsRepository::class)->flush();
+
+    // ★ بوّابة الكفاءات **مطفأة افتراضاً** الآن: الموظّف ينشر فيظهر فوراً،
+    //   والتحقّق مقصورٌ على الشركة — فهي من يرى ملفّات الناس.
+    //
+    //   هذا الملفّ مكرَّسٌ لدورة الاعتماد نفسها، فيُشعلها صراحةً. والآلة كلّها
+    //   باقية: هكذا نضمن أنّ إشعال المفتاح من اللوحة يُعيدها كاملةً، بلا كود.
+    app(SettingsRepository::class)->set(SettingKeys::MODERATION_REQUIRE_CANDIDATE_APPROVAL, true);
 
     $this->admin = User::factory()->create();
     $this->admin->assignRole(Roles::SUPER_ADMIN);

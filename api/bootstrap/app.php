@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureCompanyVerified;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // statefulApi() يُفعّل EnsureFrontendRequestsAreStateful لنطاقات SANCTUM_STATEFUL_DOMAINS.
         // مسار التوكن يبقى متاحاً لتطبيق الجوال مستقبلاً دون تغيير.
         $middleware->statefulApi();
+
+        // بوّابة الشركات: لا تصفّح ولا كشف قبل التوثيق. تُطبَّق على مسارات
+        // الكفاءات في routes/api.php — راجع EnsureCompanyVerified.
+        $middleware->alias([
+            'company.verified' => EnsureCompanyVerified::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -34,7 +34,7 @@ final class RegisterController extends Controller
 
     public function company(RegisterCompanyRequest $request): JsonResponse
     {
-        /** @var array{name: string, email: string, phone?: string|null, password: string, legal_name: string, cr_number?: string|null} $data */
+        /** @var array{name: string, email: string, phone?: string|null, password: string, legal_name: string, cr_number: string} $data */
         $data = $request->safe()->only(['name', 'email', 'phone', 'password', 'legal_name', 'cr_number']);
 
         $user = $this->register->company($data);

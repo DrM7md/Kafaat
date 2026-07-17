@@ -10,6 +10,8 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeProfile;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Notifications\Events;
+use App\Services\Notifications\Notifier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,7 +35,10 @@ final class CandidateApprovalController extends Controller
 
     private const SORTABLE = ['submitted_at', 'created_at', 'completeness', 'years_experience', 'title'];
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly Notifier $notifier,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -75,6 +80,8 @@ final class CandidateApprovalController extends Controller
 
         $this->audit->log('profile.approved', $profile, ['ref' => $profile->ref]);
 
+        $this->notifier->send($profile->user, Events::profileApproved());
+
         return response()->json(['message' => 'اعتُمد الملفّ وأصبح ظاهراً للشركات.']);
     }
 
@@ -95,6 +102,9 @@ final class CandidateApprovalController extends Controller
             'ref' => $profile->ref,
             'reason' => $data['reason'],
         ]);
+
+        // الرسالة كانت تَعِد بأنّ «صاحبه أُبلغ» — ولم يكن يُبلَّغ أحد.
+        $this->notifier->send($profile->user, Events::profileRejected($data['reason']));
 
         return response()->json(['message' => 'رُفض الطلب وأُبلغ صاحبه بالسبب.']);
     }

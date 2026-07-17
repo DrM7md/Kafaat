@@ -7,9 +7,11 @@ namespace App\Models;
 use App\Enums\UserStatus;
 use App\Enums\UserType;
 use App\Support\Permissions;
+use App\Support\Roles;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -27,6 +29,12 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $phone
  * @property UserType $type
  * @property UserStatus $status
+ *
+ * ★ الملفّان **قابلان للعدم**: للمستخدم واحدٌ منهما أو لا شيء (المشرف بلا
+ *   ملفّ). بلا هذا التصريح يستنتج Larastan من `HasOne` نوعاً غير قابلٍ للعدم،
+ *   فيَعدّ فحصَ `!== null` عبثاً — ويُسكت أداةً كان يجب أن تحرسنا.
+ * @property-read EmployeeProfile|null $employeeProfile
+ * @property-read CompanyProfile|null $companyProfile
  */
 #[Fillable(['name', 'email', 'phone', 'password', 'type', 'status', 'locale'])]
 #[Hidden(['password', 'remember_token'])]
@@ -96,5 +104,35 @@ class User extends Authenticatable
             Permissions::all(),
             fn (string $permission): bool => Gate::forUser($this)->allows($permission),
         ));
+    }
+
+    /**
+     * كل من يستطيع فعل شيء — أياً كان طريقه إلى الصلاحية.
+     *
+     * تعيش هنا لا في `Notifier` لأنّها تحمل الفخّ نفسه الذي تشرحه
+     * `effectivePermissions()` أعلاه: المشرف العام **لا تُسنَد إليه صلاحيةٌ
+     * صراحةً**، فـ `User::permission(...)` من Spatie تُسقطه. مُبلِّغٌ يعتمد
+     * عليها وحدها كان سيترك المشرف العام بلا إشعارٍ واحد — وهو ADR-018 يتكرّر.
+     *
+     * الطرق إلى الصلاحية ثلاثة لا رابع لها: إسنادٌ مباشر، أو دورٌ يحملها،
+     * أو `Gate::before`. أوّلان يلتقطهما Spatie، والثالث محصورٌ في المشرف
+     * العام — فنضمّه إلى المرشّحين ثم **نترك الـ Gate تقرّر**. فلو تغيّرت
+     * قاعدة `Gate::before` غداً، بقي القرارُ لها وحدها.
+     *
+     * @return Collection<int, self>
+     */
+    public static function whoCan(string $permission): Collection
+    {
+        $candidates = self::query()
+            ->where('status', UserStatus::Active)
+            ->where(function ($query) use ($permission) {
+                $query->permission($permission)
+                    ->orWhereHas('roles', fn ($q) => $q->where('name', Roles::SUPER_ADMIN));
+            })
+            ->get();
+
+        return $candidates->filter(
+            fn (self $user): bool => Gate::forUser($user)->allows($permission),
+        );
     }
 }

@@ -66,7 +66,51 @@ class SettingSeeder extends Seeder
                 'type' => 'int',
                 'group' => 'billing',
                 'is_public' => true,
-                'description' => 'رسم الكشف الواحد. القيمة الافتراضية من نموذج التصميم (75 ر.ق).',
+                'description' => 'رسم الكشف الافتراضي، حين لا يحمل المجال سعراً خاصّاً. القيمة من نموذج التصميم (75 ر.ق).',
+            ],
+
+            // ── الوظائف ──
+            [
+                'key' => K::JOB_FREE_SLOTS,
+                'value' => 10,
+                'type' => 'int',
+                'group' => 'jobs',
+                'is_public' => true,
+                'description' => 'عدد الوظائف المفتوحة المجّانية لكل شركة. إغلاق وظيفة يحرّر خانتها.',
+            ],
+            [
+                'key' => K::JOB_EXTRA_SLOT_FEE,
+                'value' => 150,
+                'type' => 'int',
+                'group' => 'jobs',
+                'is_public' => true,
+                'description' => 'ثمن الخانة الواحدة بعد استنفاد الحصّة المجّانية.',
+            ],
+            [
+                'key' => K::FEATURE_JOBS,
+                'value' => true,
+                'type' => 'bool',
+                'group' => 'features',
+                'is_public' => true,
+                'description' => 'لوحة الوظائف والإعجاب. إطفاؤها يُخفي القسم كلّه عن الجميع.',
+            ],
+
+            // ── مؤشّر الطلب ──
+            [
+                'key' => K::DEMAND_BADGE_MIN,
+                'value' => 3,
+                'type' => 'int',
+                'group' => 'demand',
+                'is_public' => false,
+                'description' => 'عدد الكشوف المدفوعة التي تُظهر شارة «مطلوب». دونها لا تظهر شارةٌ أصلاً.',
+            ],
+            [
+                'key' => K::DEMAND_BADGE_HIGH_MIN,
+                'value' => 7,
+                'type' => 'int',
+                'group' => 'demand',
+                'is_public' => false,
+                'description' => 'عدد الكشوف التي تُظهر شارة «مطلوب بشدّة».',
             ],
             [
                 'key' => K::BILLING_GATEWAY,
@@ -135,6 +179,42 @@ class SettingSeeder extends Seeder
                 'type' => 'bool',
                 'group' => 'refund',
                 'description' => 'ADR-010: يُعاد الحجب بعد الاسترداد. خدمةٌ بلا مقابل خطأ منطقي وقانوني.',
+            ],
+
+            // ── الإشراف: بوّابتا السوق ──
+            [
+                'key' => K::MODERATION_REQUIRE_CANDIDATE_APPROVAL,
+                'value' => false,
+                'type' => 'bool',
+                'group' => 'moderation',
+                'is_public' => true,
+                'description' => 'هل ينتظر ملفّ الكفاءة موافقة مشرف؟ معطّل: الموظّف ينشر فوراً. أشعِله إن امتلأت المنصّة بملفّات وهمية.',
+            ],
+            [
+                'key' => K::MODERATION_REQUIRE_COMPANY_VERIFICATION,
+                'value' => true,
+                'type' => 'bool',
+                'group' => 'moderation',
+                'is_public' => true,
+                'description' => 'هل تنتظر الشركة توثيق مشرف قبل تصفّح الكفاءات؟ ★ إطفاؤه يفتح ملفّات الناس لأي شركة وهمية.',
+            ],
+
+            // ── مؤشّر الانتقال ──
+            [
+                'key' => K::READINESS_FRESH_DAYS,
+                'value' => 45,
+                'type' => 'int',
+                'group' => 'readiness',
+                'is_public' => true,
+                'description' => 'بعد كم يوماً نطلب من الموظّف تجديد حالته بنقرة واحدة.',
+            ],
+            [
+                'key' => K::READINESS_STALE_DAYS,
+                'value' => 90,
+                'type' => 'int',
+                'group' => 'readiness',
+                'is_public' => true,
+                'description' => '★ بعده تُطفأ الشارة: الشركة تدفع رسم الكشف على أساسها، ولا تُباع لها حالةٌ بائتة.',
             ],
 
             // ── الخصوصية ──

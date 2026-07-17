@@ -9,6 +9,7 @@ use App\Models\CandidateReveal;
 use App\Models\CompanyProfile;
 use App\Models\EmployeeProfile;
 use App\Models\User;
+use App\Support\EmployerName;
 use App\Support\Permissions;
 use App\Support\SettingKeys;
 
@@ -85,8 +86,21 @@ final class ProfileVisibilityService
 
         $company = $this->companyOf($viewer);
 
-        return $company !== null
-            && $profile->current_employer_company_id === $company->id;
+        if ($company === null) {
+            return false;
+        }
+
+        if ($profile->current_employer_company_id === $company->id) {
+            return true;
+        }
+
+        // ★ الاسم المطبَّع — نفس شبكة الأمان التي في استعلام التصفّح
+        //   (CandidateController::applyEmployerBlindness). الطبقتان تُطبَّقان
+        //   في الموضعين معاً، وإلّا حجب أحدُهما ما يكشفه الآخر: يختفي المرشّح
+        //   من الشبكة، ويُفتح ملفّه بالرابط المباشر.
+        $key = $profile->current_employer_name_key;
+
+        return $key !== null && in_array($key, EmployerName::keysOf($company), true);
     }
 
     public function hasValidReveal(?CompanyProfile $company, EmployeeProfile $profile): bool

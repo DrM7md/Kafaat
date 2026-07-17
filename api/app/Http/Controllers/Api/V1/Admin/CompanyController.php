@@ -10,6 +10,8 @@ use App\Http\Controllers\Controller;
 use App\Models\CandidateReveal;
 use App\Models\CompanyProfile;
 use App\Services\Audit\AuditLogger;
+use App\Services\Notifications\Events;
+use App\Services\Notifications\Notifier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +23,10 @@ final class CompanyController extends Controller
 
     private const SORTABLE = ['legal_name', 'verification_status', 'created_at', 'reveals_count'];
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly Notifier $notifier,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -113,6 +118,23 @@ final class CompanyController extends Controller
             'before' => $before,
             'after' => $status->value,
         ]);
+
+        // ★ التوثيق هو ما يفتح الموقع للشركة. صمتُنا هنا يتركها تنتظر بلا خبر
+        //   وقد صار بابُها مفتوحاً — أو مغلقاً بلا أن تدري.
+        //
+        //   ولا نُبلّغ إلّا حين تتغيّر الحالة فعلاً: إعادةُ الحفظ على القيمة
+        //   نفسها كانت تُغرق الشركة بإشعارٍ لكل نقرةٍ من المشرف.
+        if ($before !== $status->value) {
+            $notification = match ($status) {
+                VerificationStatus::Verified => Events::companyVerified(),
+                VerificationStatus::Rejected => Events::companyRejected(),
+                default => null,
+            };
+
+            if ($notification !== null) {
+                $this->notifier->send($company->user, $notification);
+            }
+        }
 
         return response()->json(['message' => 'حُدِّثت حالة التوثيق.', 'status' => $status->value]);
     }

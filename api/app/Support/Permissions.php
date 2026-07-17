@@ -44,6 +44,24 @@ final class Permissions
     /** 🔴 حرجة: منح كشفٍ مجّاني دون دفع. */
     public const CANDIDATE_GRANT_REVEAL = 'candidate.grant_reveal';
 
+    // ── الوظائف ──
+    /** الشركة تنشر متطلّباتها وتديرها. */
+    public const JOB_MANAGE = 'job.manage';
+
+    /** الموظّف يتصفّح لوحة الوظائف. */
+    public const JOB_BROWSE = 'job.browse';
+
+    /**
+     * الموظّف يُبدي إعجابه بوظيفة.
+     *
+     * ★ الإعجاب **لا يكشف هويّته**: الشركة ترى بطاقةً محجوبة وزرَّ كشف. ما
+     *   يبيعه الإعجاب هو **النيّة** لا الاسم.
+     */
+    public const JOB_INTEREST = 'job.interest';
+
+    /** 🔴 حرجة: منح خانات وظائف مجّانية تتجاوز الحصّة. */
+    public const JOB_GRANT_SLOTS = 'job.grant_slots';
+
     // ── الشركات ──
     public const COMPANY_VIEW = 'company.view';
 
@@ -99,6 +117,12 @@ final class Permissions
                 self::CANDIDATE_CONTACT,
                 self::CANDIDATE_GRANT_REVEAL,
             ],
+            'الوظائف' => [
+                self::JOB_MANAGE,
+                self::JOB_BROWSE,
+                self::JOB_INTEREST,
+                self::JOB_GRANT_SLOTS,
+            ],
             'الشركات' => [
                 self::COMPANY_VIEW,
                 self::COMPANY_APPROVE,
@@ -140,6 +164,10 @@ final class Permissions
         return [
             self::PROFILE_MODERATE,
             self::CANDIDATE_GRANT_REVEAL,
+
+            // منح خانات وظائف مجّانية = إسقاط رسمٍ مستحقّ. فعلٌ ماليّ يُدقَّق.
+            self::JOB_GRANT_SLOTS,
+
             self::PAYMENT_REFUND,
             self::SETTINGS_UPDATE,
             self::RBAC_MANAGE,
