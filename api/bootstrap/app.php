@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureCompanyVerified;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // statefulApi() يُفعّل EnsureFrontendRequestsAreStateful لنطاقات SANCTUM_STATEFUL_DOMAINS.
         // مسار التوكن يبقى متاحاً لتطبيق الجوال مستقبلاً دون تغيير.
         $middleware->statefulApi();
+
+        // ترويسات الأمان على كل استجابة — دفاعٌ في العمق على مسار الـ API
+        // والتنزيلات. حمايةُ تأطير صفحات الواجهة في web/public/.htaccess.
+        $middleware->append(SecurityHeaders::class);
 
         // بوّابة الشركات: لا تصفّح ولا كشف قبل التوثيق. تُطبَّق على مسارات
         // الكفاءات في routes/api.php — راجع EnsureCompanyVerified.
