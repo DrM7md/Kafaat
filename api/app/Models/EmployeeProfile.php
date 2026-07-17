@@ -287,6 +287,47 @@ class EmployeeProfile extends Model
             ->where('approval_status', ApprovalStatus::Approved);
     }
 
+    /**
+     * ★★ عمى صاحب العمل — يُقصي من الاستعلام كلَّ من يعمل حالياً لدى الشركة
+     *    الطالبة، بالمعرّف الصريح وبمفتاح الاسم المطبَّع معاً (شبكةُ أمان).
+     *
+     * يُطبَّق في **الاستعلام** لا في الترشيح بعده: لو رُشّح بعد العدّ لسُرّب
+     * وجودُ الملفّ عبر فرق عدد النتائج؛ ولو تُرك لـ `MaskedProfileResource`
+     * لرمى `ProfileNotVisibleException` أثناء تسلسل المجموعة فأفشل الاستجابة
+     * كلَّها بـ 404. لذا يُستدعى في كل استعلامٍ يُري ملفّاتِ الناس لشركة:
+     * التصفّح، ومِصفاة الجنسيات، وقائمة المعجبين بوظيفة.
+     *
+     * لا شركة (مشرفٌ أو موظّف) أو المفتاح الإداريّ مُطفأ ⇒ لا-عملية.
+     *
+     * ⚠️ `whereNull` صريحةً قبل `whereNotIn`: لولاها لأسقطت SQL كلَّ صفٍّ
+     *    مفتاحُه `NULL` (فـ `NULL NOT IN (…)` = `NULL` لا `TRUE`) — أي كلّ من
+     *    لم يذكر جهة عمله. الحجب كان سيبتلع الجميع.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeBlindTo(Builder $query, ?CompanyProfile $company): void
+    {
+        if ($company === null || ! (bool) settings(SettingKeys::PRIVACY_EMPLOYER_BLIND, true)) {
+            return;
+        }
+
+        // الطبقة الأولى: الرابط الصريح.
+        $query->where(function (Builder $q) use ($company) {
+            $q->whereNull('current_employer_company_id')
+                ->orWhere('current_employer_company_id', '!=', $company->id);
+        });
+
+        // الطبقة الثانية: الاسم المطبَّع — لو أفلت الربطُ بالمعرّف مرّةً.
+        $keys = EmployerName::keysOf($company);
+
+        if ($keys !== []) {
+            $query->where(function (Builder $q) use ($keys) {
+                $q->whereNull('current_employer_name_key')
+                    ->orWhereNotIn('current_employer_name_key', $keys);
+            });
+        }
+    }
+
     /** هل هذا الملفّ ظاهرٌ للشركات فعلاً؟ */
     public function isPublished(): bool
     {
