@@ -34,7 +34,7 @@ final class RegisterUserAction
     {
         return DB::transaction(function () use ($data): User {
             // type/status عبر forceFill — يملكهما الخادم (خارج fillable).
-            $user = User::make([
+            $user = new User([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
@@ -68,7 +68,7 @@ final class RegisterUserAction
     {
         $user = DB::transaction(function () use ($data): User {
             // type/status عبر forceFill — يملكهما الخادم (خارج fillable).
-            $user = User::make([
+            $user = new User([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,

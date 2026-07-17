@@ -82,7 +82,7 @@ final class LookupController extends Controller
         $group = (string) $data['group'];
         $label = (string) $data['label_ar'];
 
-        $lookup = Lookup::make([
+        $lookup = new Lookup([
             'group' => $group,
             'key' => $this->uniqueKey($group, $label),
             'label_ar' => $label,

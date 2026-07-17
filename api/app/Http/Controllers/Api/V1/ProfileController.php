@@ -418,7 +418,7 @@ final class ProfileController extends Controller
 
         // معطَّلة ومعلَّقة: لا تظهر في قائمة أحد حتى يعتمدها مشرف. الحالة
         // والنسبة عبر forceFill — يملكهما الخادم لا نموذجُ الطلب (خارج fillable).
-        $suggestion = Lookup::make([
+        $suggestion = new Lookup([
             'group' => $group,
             'key' => $key,
             'label_ar' => $label,
