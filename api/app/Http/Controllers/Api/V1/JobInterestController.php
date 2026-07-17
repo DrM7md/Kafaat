@@ -45,11 +45,15 @@ final class JobInterestController extends Controller
         abort_if($company === null, 403, 'متاح لحسابات الشركات فقط.');
         abort_unless($job->company_profile_id === $company->id, 404);
 
+        // ★ عمى صاحب العمل في الاستعلام: موظّفٌ يعمل حالياً لدى هذه الشركة
+        //   وأبدى إعجاباً قبل أن تُربَط شركتُه به يجب أن يُقصى هنا — لا أن
+        //   يُترك لـ MaskedProfileResource فيرمي 404 يُفشل الصفحة كلَّها.
         $profiles = EmployeeProfile::query()
             ->whereHas('jobInterests', fn ($q) => $q
                 ->where('job_posting_id', $job->id)
                 ->whereNull('withdrawn_at'))
             ->browsable()
+            ->blindTo($company)
             ->with(['user', 'field', 'city', 'nationality', 'employmentStatus', 'skills'])
             ->withCount(['reveals as reveals_count' => fn ($q) => $q->where('status', RevealStatus::Completed)])
             ->get();

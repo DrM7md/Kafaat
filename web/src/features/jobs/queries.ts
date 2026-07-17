@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
+import { isAllowedRedirect } from '@/shared/lib/redirect'
 import type { Candidate, Job, JobSlots, Paginated } from '@/shared/api/types'
 
 // ── جانب الموظّف ──
@@ -116,7 +117,12 @@ export function usePurchaseSlot() {
       await queryClient.invalidateQueries({ queryKey: ['jobs'] })
 
       // البوّابة تستضيف صفحة الدفع — لا نجمع بيانات بطاقةٍ أبداً (PCI-DSS).
-      window.location.href = response.data.payment_url
+      // نفس حاجز الكشف: لا نتبع رابطاً إلّا من أصلنا أو أصل الـ API.
+      const url = response.data.payment_url
+      if (!isAllowedRedirect(url)) {
+        throw new Error('رابط دفعٍ غير موثوق — أُلغيت إعادة التوجيه.')
+      }
+      window.location.href = url
     },
   })
 }

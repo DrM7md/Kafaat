@@ -12,9 +12,7 @@ use App\Models\EmployeeProfile;
 use App\Models\Lookup;
 use App\Services\Audit\AuditLogger;
 use App\Services\Masking\ProfileVisibilityService;
-use App\Support\EmployerName;
 use App\Support\Permissions;
-use App\Support\SettingKeys;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -172,39 +170,16 @@ final class CandidateController extends Controller
         return $request->user()?->can(Permissions::PROFILE_MODERATE) === true;
     }
 
-    /** @param Builder<EmployeeProfile> $query */
+    /**
+     * عمى صاحب العمل — منطقُه كلُّه في `EmployeeProfile::scopeBlindTo` كي
+     * يُستدعى من كل استعلامٍ يُري ملفّاتِ الناس لشركة (هنا وفي قائمة المعجبين)
+     * فلا يتباعد التطبيقان.
+     *
+     * @param  Builder<EmployeeProfile>  $query
+     */
     private function applyEmployerBlindness(Builder $query, Request $request): void
     {
-        $company = $this->visibility->companyOf($request->user());
-
-        if ($company === null || ! (bool) settings(SettingKeys::PRIVACY_EMPLOYER_BLIND, true)) {
-            return;
-        }
-
-        // الطبقة الأولى: الرابط الصريح.
-        $query->where(function (Builder $q) use ($company) {
-            $q->whereNull('current_employer_company_id')
-                ->orWhere('current_employer_company_id', '!=', $company->id);
-        });
-
-        // ★ الطبقة الثانية: الاسم المطبَّع — شبكةُ أمانٍ لا زينة.
-        //
-        //   الربط بالمعرّف يقع في موضعين (حفظُ الملفّ، وتسجيلُ الشركة). لو
-        //   أفلت أحدُهما مرّةً — هجرةٌ قديمة، صفٌّ كُتب من بذرة، عطبٌ في وصلةٍ
-        //   مستقبَلية — لظهر الموظّف لصاحب عمله. الشرطان معاً، والفهرس يجعل
-        //   الثاني بلا كلفة.
-        //
-        // ⚠️ `whereNull` صراحةً: لو كتبناها `whereNotIn` وحدها لأسقطت SQL كلَّ
-        //    صفٍّ مفتاحُه `NULL` (فـ `NULL NOT IN (…)` تساوي `NULL` لا `TRUE`)
-        //    — أي كلّ من لم يذكر جهة عمله. الحجب كان سيبتلع الجميع.
-        $keys = EmployerName::keysOf($company);
-
-        if ($keys !== []) {
-            $query->where(function (Builder $q) use ($keys) {
-                $q->whereNull('current_employer_name_key')
-                    ->orWhereNotIn('current_employer_name_key', $keys);
-            });
-        }
+        $query->blindTo($this->visibility->companyOf($request->user()));
     }
 
     /**

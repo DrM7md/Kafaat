@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { api } from '@/shared/api/client'
+import { isAllowedRedirect } from '@/shared/lib/redirect'
 
 type RevealBody = {
   message?: string
@@ -92,19 +93,4 @@ function idempotencyKeyFor(ref: string): string {
 
 function clearIdempotencyKey(ref: string): void {
   sessionStorage.removeItem(`kafaat.reveal.${ref}`)
-}
-
-/** تحصين ضدّ إعادة التوجيه المفتوح: لا نتبع إلا أصلنا أو أصل الـ API. */
-function isAllowedRedirect(url: string): boolean {
-  try {
-    const target = new URL(url, window.location.origin)
-    const allowed = new Set([window.location.origin])
-    const apiUrl = import.meta.env.VITE_API_URL
-    if (typeof apiUrl === 'string' && apiUrl !== '') {
-      allowed.add(new URL(apiUrl).origin)
-    }
-    return allowed.has(target.origin)
-  } catch {
-    return false
-  }
 }

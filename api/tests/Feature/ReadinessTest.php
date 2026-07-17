@@ -156,15 +156,15 @@ it('يُعلن بيات الحالة بعد عتبة الشيخوخة', function
  * ★ العهد المقطوع في محرّك الإعدادات: حالةٌ رابعة بعتبتها ولونها — بلا كود.
  */
 it('يحترم حالةً رابعة يضيفها المشرف بعتبتها من اللوحة', function () {
-    Lookup::create([
+    // status عبر forceFill كما في Admin\LookupController::store — خارج fillable.
+    Lookup::make([
         'group' => Lookup::EMPLOYMENT_STATUS,
         'key' => 'urgent',
         'label_ar' => 'يبحث بجدّية',
         'sort_order' => 0,
         'is_active' => true,
-        'status' => Lookup::STATUS_APPROVED,
         'meta' => ['bg' => '#FBE9E9', 'color' => '#8a2b2b', 'dot' => '#C83C3C', 'readiness_min' => 90],
-    ]);
+    ])->forceFill(['status' => Lookup::STATUS_APPROVED])->save();
 
     $user = employeeUser();
 

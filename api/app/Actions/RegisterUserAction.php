@@ -33,14 +33,17 @@ final class RegisterUserAction
     public function employee(array $data): User
     {
         return DB::transaction(function () use ($data): User {
-            $user = User::create([
+            // type/status عبر forceFill — يملكهما الخادم (خارج fillable).
+            $user = new User([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
                 'password' => $data['password'],
+            ]);
+            $user->forceFill([
                 'type' => UserType::Employee,
                 'status' => UserStatus::Active,
-            ]);
+            ])->save();
 
             $user->assignRole(Roles::EMPLOYEE);
 
@@ -64,14 +67,17 @@ final class RegisterUserAction
     public function company(array $data): User
     {
         $user = DB::transaction(function () use ($data): User {
-            $user = User::create([
+            // type/status عبر forceFill — يملكهما الخادم (خارج fillable).
+            $user = new User([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
                 'password' => $data['password'],
+            ]);
+            $user->forceFill([
                 'type' => UserType::Company,
                 'status' => UserStatus::Active,
-            ]);
+            ])->save();
 
             $user->assignRole(Roles::COMPANY);
 

@@ -24,6 +24,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 use Illuminate\Validation\ValidationException;
 
 final class ProfileController extends Controller
@@ -58,16 +60,20 @@ final class ProfileController extends Controller
     {
         $profile = $this->ownProfile($request);
 
+        $userId = $request->user()?->id;
+
         $data = $request->validate([
             'title' => ['sometimes', 'string', 'max:160'],
-            'field_id' => ['nullable', 'exists:lookups,id'],
+            // ★ كل معرّفٍ مقيَّدٌ بمجموعته: بلا هذا كان يمكن إسناد `field_id`
+            //   إلى معرّف مدينة — تسميةٌ في غير موضعها. راجع lookupRule.
+            'field_id' => ['nullable', $this->lookupRule(Lookup::FIELD, $userId)],
             'years_experience' => ['sometimes', 'integer', 'min:0', 'max:60'],
-            'country_id' => ['nullable', 'exists:lookups,id'],
-            'nationality_id' => ['nullable', 'exists:lookups,id'],
-            'city_id' => ['nullable', 'exists:lookups,id'],
+            'country_id' => ['nullable', $this->lookupRule(Lookup::COUNTRY, $userId)],
+            'nationality_id' => ['nullable', $this->lookupRule(Lookup::NATIONALITY, $userId)],
+            'city_id' => ['nullable', $this->lookupRule(Lookup::CITY, $userId)],
             // ★ لا يُرسلها العميل عادةً: تُشتقّ من `readiness` أدناه. تبقى
             //   مقبولةً للمسارات التي لا تعرف المؤشّر (بذرة، أداة إدارية).
-            'employment_status_id' => ['nullable', 'exists:lookups,id'],
+            'employment_status_id' => ['nullable', $this->lookupRule(Lookup::EMPLOYMENT_STATUS, $userId)],
 
             // مؤشّر الرغبة في الانتقال — 0 مستقرّ تماماً، 100 يبحث بجدّية.
             'readiness' => ['nullable', 'integer', 'min:0', 'max:100'],
@@ -364,6 +370,28 @@ final class ProfileController extends Controller
     }
 
     /**
+     * قاعدة وجودٍ تُقيّد المعرّف بمجموعته: قيمةٌ معتمَدةٌ في المجموعة، أو
+     * اقتراحٌ معلَّقٌ في المجموعة يملكه صاحب الطلب نفسه — فملفُّه يشير إليه
+     * ريثما يعتمده مشرف. بلا التقييد كان أيُّ `exists:lookups,id` يقبل معرّفاً
+     * من أي مجموعة، فيُسنَد مجالٌ إلى مدينة.
+     */
+    private function lookupRule(string $group, ?int $userId): Exists
+    {
+        return Rule::exists('lookups', 'id')->where(function ($query) use ($group, $userId): void {
+            $query->where('group', $group)->where(function ($q) use ($userId): void {
+                $q->where('status', Lookup::STATUS_APPROVED);
+
+                if ($userId !== null) {
+                    $q->orWhere(function ($owned) use ($userId): void {
+                        $owned->where('status', Lookup::STATUS_PENDING)
+                            ->where('suggested_by_user_id', $userId);
+                    });
+                }
+            });
+        });
+    }
+
+    /**
      * يحوّل نصّ «أخرى» إلى صفٍّ في `lookups` بحالة `pending`.
      *
      * الصفّ حقيقيّ من فوره، فيشير إليه `field_id` مباشرةً ويرى الموظّف قيمته
@@ -388,18 +416,21 @@ final class ProfileController extends Controller
             return $existing;
         }
 
-        $suggestion = Lookup::create([
+        // معطَّلة ومعلَّقة: لا تظهر في قائمة أحد حتى يعتمدها مشرف. الحالة
+        // والنسبة عبر forceFill — يملكهما الخادم لا نموذجُ الطلب (خارج fillable).
+        $suggestion = new Lookup([
             'group' => $group,
             'key' => $key,
             'label_ar' => $label,
             'parent_id' => $parentId,
             'sort_order' => 999,
-
-            // معطَّلة ومعلَّقة: لا تظهر في قائمة أحد حتى يعتمدها مشرف.
             'is_active' => false,
+        ]);
+
+        $suggestion->forceFill([
             'status' => Lookup::STATUS_PENDING,
             'suggested_by_user_id' => $request->user()?->id,
-        ]);
+        ])->save();
 
         // بلا هذا يبقى الاقتراح حبيس القاعدة حتى يفتح مشرفٌ صفحةَ القوائم صدفةً.
         $this->notifier->sendToPermission(

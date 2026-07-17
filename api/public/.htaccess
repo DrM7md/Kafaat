@@ -1,3 +1,19 @@
+# ترويسات الأمان — تُطبَّق على كل استجابة من هذا الجذر: صفحاتِ الواجهة
+# الساكنة (index.html/assets) والـ API معاً (نشرٌ أحادي الأصل). الـ middleware
+# في Laravel لا يُشغَّل للملفّات الساكنة، فموضعُ حماية تأطير الـ SPA هنا.
+#
+# ⚠️ لا CSP بـ default-src هنا: نفس الترويسة تغطّي صفحةَ SPA تُحمّل JS وخطوطاً،
+#    فتقييد المصادر يكسرها. نقصر CSP على frame-ancestors (منع التأطير) — وهو
+#    ما لا يمسّ تحميل الموارد. الـ middleware يضيف default-src 'none' لردود الـ
+#    API وحدها (JSON لا يُحمّل شيئاً).
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set Content-Security-Policy "frame-ancestors 'none'"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

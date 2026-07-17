@@ -28,6 +28,21 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $reveals_count
  * @property-read int|null $completed_reveals_count
  */
+/*
+ * قرارٌ أمنيّ (تعمية at-rest — مراجعة 2026): `cr_number` يبقى نصّاً صريحاً
+ * عن وعي، لا إهمال. سببان:
+ *   1. مبحوثٌ في لوحة المشرف (`Admin\CompanyController` بـ LIKE). التعمية
+ *      بمفتاح Laravel تُنتج نصّاً مختلفاً كل مرّة (IV عشوائي)، فتكسر البحث
+ *      والفهرسة — ويلزمها فهرسٌ أعمى (blind index)، وهو ثقلٌ لا يبرّره حقلٌ
+ *      رقمُه شبه علنيّ (السجلّ التجاري سجلٌّ عام).
+ *   2. المنصّة لا تخزّن هويّةً وطنية ولا بيانات بطاقات (PCI نظيف) — فلا PII
+ *      عالي الحساسية يستدعي المخاطرة.
+ *
+ * ⚠️ لا تُضِف `'cr_number' => 'encrypted'` إلى casts: ستكسر البحث وتُعطب
+ *    الصفوف القائمة. إن تغيّر نموذج التهديد، فالمسار: فهرسٌ أعمى + هجرة
+ *    توسيعٍ وتشفيرٍ مخصّصة. وكذلك `users.phone` (محجوبٌ خلف الدفع): تعميته
+ *    ممكنة لكنها تتطلّب توسيع العمود وهجرة بيانات حيّة وثبات APP_KEY.
+ */
 #[Fillable(['legal_name', 'brand_name', 'cr_number', 'industry_id', 'size_id', 'logo_path'])]
 class CompanyProfile extends Model
 {

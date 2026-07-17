@@ -69,10 +69,13 @@ Route::post('/auth/login', [SessionController::class, 'store'])
     ->middleware('throttle:5,1')->name('auth.login');
 
 // ⚠️ بلا مصادقة، بتحقّق توقيع. راجع PaymentWebhookController.
+// throttle حدٌّ أعلى معقول لإعادات البوّابة يمنع الإغراق (لا يمسّ الأمان —
+// التوقيع يحرسه — بل يمنع استنزاف الموارد بطلباتٍ مزوّرة بلا حساب).
 Route::post('/payments/webhook/{provider}', PaymentWebhookController::class)
-    ->name('payments.webhook');
+    ->middleware('throttle:60,1')->name('payments.webhook');
 
-Route::middleware('auth:sanctum')->group(function () {
+// account.active يلي auth:sanctum: حسابٌ عُلِّق بعد دخوله لا يُكمل جلسته.
+Route::middleware(['auth:sanctum', 'account.active'])->group(function () {
     Route::post('/auth/logout', [SessionController::class, 'destroy'])->name('auth.logout');
     Route::get('/me', MeController::class)->name('me');
 
@@ -88,12 +91,20 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── الحساب: ما يملكه المستخدم عن نفسه ──
     // بلا حارس صلاحية عمداً: يعدّل نفسه لا غيره، والاستعلام لا يخرج من صفّه.
     // ما يملكه الخادم (النوع، الحالة، التوثيق) محجوبٌ في `UpdateAccountRequest`.
-    Route::put('/me', [AccountController::class, 'update'])->name('me.update');
+    //
+    // ★ throttle هنا يقطع أوراكل تعداد الحسابات: تحقّق `email.unique` كان
+    //   يكشف تسجيلَ أي بريدٍ لمهاجمٍ مصادَق بلا حدّ (يُبدّل بريده لبريد الهدف
+    //   ويقرأ «مسجَّل لحسابٍ آخر»). عشرون في الدقيقة تكفي التعديلَ الشرعيّ.
+    Route::put('/me', [AccountController::class, 'update'])
+        ->middleware('throttle:20,1')->name('me.update');
     Route::put('/me/password', [AccountController::class, 'updatePassword'])
         ->middleware('throttle:6,1')->name('me.password');
 
     // ── حقوق صاحب البيانات (قانون رقم 13) ──
-    Route::get('/me/data-export', [AccountController::class, 'export'])->name('me.export');
+    // تصدير البيانات استعلامٌ ثقيل (كل ملفّ المستخدم وعلاقاته) — throttle
+    // يمنع إساءةً تستنزف القاعدة.
+    Route::get('/me/data-export', [AccountController::class, 'export'])
+        ->middleware('throttle:6,1')->name('me.export');
     Route::delete('/me', [AccountController::class, 'destroy'])->name('me.destroy');
 
     // ── الملفّ المهني (الموظّف) ──
