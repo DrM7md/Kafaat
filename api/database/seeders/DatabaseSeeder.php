@@ -22,13 +22,15 @@ class DatabaseSeeder extends Seeder
 
         $admin = User::firstOrCreate(
             ['email' => 'admin@kafaat.qa'],
-            [
-                'name' => 'المشرف العام',
-                'password' => 'password',
-                'type' => UserType::Admin,
-                'status' => UserStatus::Active,
-            ],
+            ['name' => 'المشرف العام', 'password' => 'password'],
         );
+
+        // type/status عبر forceFill — خارج التعبئة الجماعية (يملكهما الخادم).
+        // القيمة الافتراضية للعمود «موظّف»، فبلا هذا يُبذَر المشرف بنوعٍ خاطئ.
+        $admin->forceFill([
+            'type' => UserType::Admin,
+            'status' => UserStatus::Active,
+        ])->save();
 
         $admin->syncRoles([Roles::SUPER_ADMIN]);
 

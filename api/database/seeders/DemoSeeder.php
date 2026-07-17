@@ -83,13 +83,11 @@ class DemoSeeder extends Seeder
     {
         $user = User::firstOrCreate(
             ['email' => $email],
-            [
-                'name' => $legalName,
-                'password' => 'password',
-                'type' => UserType::Company,
-                'status' => UserStatus::Active,
-            ],
+            ['name' => $legalName, 'password' => 'password'],
         );
+
+        // type/status عبر forceFill — خارج fillable (القيمة الافتراضية «موظّف»).
+        $user->forceFill(['type' => UserType::Company, 'status' => UserStatus::Active])->save();
 
         $user->syncRoles([Roles::COMPANY]);
 
@@ -111,14 +109,11 @@ class DemoSeeder extends Seeder
 
         $user = User::firstOrCreate(
             ['email' => $email],
-            [
-                'name' => $row['name'],
-                'phone' => $row['phone'],
-                'password' => 'password',
-                'type' => UserType::Employee,
-                'status' => UserStatus::Active,
-            ],
+            ['name' => $row['name'], 'phone' => $row['phone'], 'password' => 'password'],
         );
+
+        // type/status عبر forceFill — خارج fillable.
+        $user->forceFill(['type' => UserType::Employee, 'status' => UserStatus::Active])->save();
 
         $user->syncRoles([Roles::EMPLOYEE]);
 

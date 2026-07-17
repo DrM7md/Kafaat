@@ -36,7 +36,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read EmployeeProfile|null $employeeProfile
  * @property-read CompanyProfile|null $companyProfile
  */
-#[Fillable(['name', 'email', 'phone', 'password', 'type', 'status', 'locale'])]
+// ⚠️ `type` و`status` خارج التعبئة الجماعية عمداً: بنية الحساب وحالتُه
+//    يملكهما الخادم لا نموذجُ الطلب — وإلّا رقّى مستخدمٌ نفسه أو عطّل حساباً
+//    بحقلٍ في الجسم. تُكتبان عبر forceFill في RegisterUserAction والبذور.
+#[Fillable(['name', 'email', 'phone', 'password', 'locale'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
