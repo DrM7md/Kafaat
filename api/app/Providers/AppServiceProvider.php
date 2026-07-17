@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -55,5 +56,15 @@ class AppServiceProvider extends ServiceProvider
         // إسقاط خاصّية غير مُعبّأة صامتاً يعني بياناً ضاع دون أن يصرخ أحد.
         // في نظامٍ يتعامل بالمال والخصوصية، الصمت أسوأ من الانهيار.
         Model::preventSilentlyDiscardingAttributes(! App::isProduction());
+
+        // سياسة كلمة المرور الدنيا لكل تسجيلٍ وتغيير: عشرةُ أحرفٍ بأحرفٍ
+        // مختلطة وأرقام. `uncompromised` (فحص haveibeenpwned) في الإنتاج
+        // وحده — كي لا يُدخل الاختبارُ ولا التطوير المحلّي نداءَ شبكةٍ هشّاً
+        // ولا يفشل بكلمة مرورٍ اختباريةٍ معروفة التسريب.
+        Password::defaults(function (): Password {
+            $rule = Password::min(10)->mixedCase()->numbers();
+
+            return App::isProduction() ? $rule->uncompromised() : $rule;
+        });
     }
 }
