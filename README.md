@@ -127,3 +127,11 @@ npm run build              # tsc + vite
 5. الخصوصية بالتصميم، لا بالإضافة.
 
 ثمّ [`progress/STATUS.md`](progress/STATUS.md) لتعرف أين نحن.
+
+## ☕ ادعم المشروع
+
+إذا أفادك هذا المشروع، يمكنك دعم تطويره عبر PayPal:
+
+[![PayPal](https://img.shields.io/badge/PayPal-Support-00457C?logo=paypal&logoColor=white)](https://paypal.me/SamtSoftware)
+
+👉 https://paypal.me/SamtSoftware
